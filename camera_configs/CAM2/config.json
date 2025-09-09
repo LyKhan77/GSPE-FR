@@ -1,0 +1,6 @@
+{
+    "id": 2,
+    "name": "Lobby",
+    "rtsp_url": "rtsp://admin:gspe-intercon@192.168.0.64:554/Channels/Stream1",
+    "enabled": false
+}

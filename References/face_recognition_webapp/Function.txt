@@ -1,0 +1,36 @@
+Web Elemen and Function
+
+<...> artinya elemen atau class berdasarkan di HTML
+
+seluruh fungsi di web ini tidak ada rigged, semua fungsi berjalan secara real-time.
+
+<header>
+|---> <header-right>
+    |--> <datetime-display> : menampilkan waktu dan tanggal sekarang atau real-time
+    |--> <button_notification> : menampilkan notifikasi dari employee yang keluar atau tidak terdeteksi lebih dari misal 30-60 detik
+    |--> <button_settings> : configurasi settings, mungkin bisa tambahkan fitur manage karyawan dan parameter tuning langsung.
+
+<Panel LIVE CCTV FEED> / <cctv-feed-section>
+|--> <section-header> 
+    |--> <ai-status> : Indikator AI Inference akan active ketika model face recognation dijalankan, dan berubah offline ketika tidak dijalankan.
+|--> <video-container> 
+    |--> <camera-stream> : Streaming CCTV Feed diisi dengan frame inferensi face recognition yang sudah dibuat AI Module nya. tinggal pasang (gunakan alamat ip camera_congfigs)
+|--> <camera-controls>
+    |--> <camera-buttons> : <1> - <..> ini merupakan button untuk switch camera ke lokasi lain/IP camera lain yang terdaftar di folder \camera_congfigs. jadi button akan ter-create dari sebuah folder.
+
+
+seluruh employee di database harus terhubung atau berelasi dengan semua function/komponen yang ada di panel ini.
+<Panel Employee Tracking> / <employee-tracking-section>
+    |---> <section-header>
+        |--> <active-count> : menghitung jumlah employee yang terdeteksi AI
+    |--> <employee-list>
+        |--> <employee-item>
+            |--> <employee-name> : nama employee dari tabel employee pada database.
+            |--> <employee-camera> : nama camera di mana employee terdeteksi AI.
+            |--> <status-indicator-wrapper> : status employee apakah masuk ke dalam streaming cctv atau tidak. jika terdeteksi maka available dengan status dot warna hijau. jika tidak maka offline dengan status dot warna merah.
+            |--> <status_time> : durasi waktu terakhir employee terdeteksi atau terlihat di CCTV AI. jika sekarang sedang terlihat maka tampilkan "just now". elemen ini bisa krusial karena harus memberi notifikasi ke <button_notification> jika employee tidak terlihat selama misal > 2 menit.
+            |--> <track-btn> : jika diclick maka akan menavigasi ke alamat CCTV dimana employee itu berada atau terdeteksi.
+    |--> <summary-stats> : menampilkan summary dari keseluruhan employee dari <employee-item>
+            |--> <present-count> : jumlah employee yang terdeteksi di CCTV
+            |--> <alert-count> : jumlah employee yang tidak terdeteksi di CCTV
+            |--> <total-count> : jumlah total employee

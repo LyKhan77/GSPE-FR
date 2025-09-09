@@ -1,0 +1,8 @@
+{
+  "auto_schedule": true,
+  "tracking_active": true,
+  "suppress_alerts": false,
+  "pause_until": null,
+  "work_hours": "08:30-17:30",
+  "lunch_break": "12:00-13:00"
+}

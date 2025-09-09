@@ -1,0 +1,120 @@
+📌 Workflow Sistem (Textual Flow)
+
+Aktor/Komponen:
+- CCTV Camera
+- Edge Device (AI Module Face Recognition with InsightFace)
+- Database (SQLite)
+- Presence Tracker (logic “last seen” & attendance)
+- Alert Engine (notifikasi)
+- WhatsApp API
+- Dashboard (Flask Web html+css+js)
+- Supervisor / HR
+=========================================================================================
+1. Data Ingestion (CCTV → Edge Device)
+- Kamera CCTV stream (RTSP) → masuk ke modul Video Stream Handler.
+- Frame diambil (sampling 5–10 fps).
+- Dilanjutkan ke pipeline AI.
+
+2. AI Face Recognition Pipeline (Edge) menggunakan InsightFace
+- Deteksi Wajah
+	- Model RetinaFace mendeteksi wajah.
+	- Dilakukan alignment (frontalization).
+
+- Embedding & Identifikasi
+	- ArcFace menghasilkan vektor embedding (512-D).
+	- Embedding dicocokkan ke database FaceTemplate (cosine similarity).
+	- Jika match → status: recognized, else: unknown.
+- Tracking & Last Seen
+	- Sistem melacak track_id untuk setiap wajah.
+	- Simpan last_seen_ts untuk setiap karyawan di tabel Event.
+
+3. Presence Status Logic
+- If wajah terlihat → status = available (in-area).
+- If wajah tidak terlihat > 5 menit → status = off (out-of-area).
+- Status disimpan ke tabel Attendance dan ditandai dengan first_in_ts atau last_out_ts.
+
+4. Alert & Notifikasi
+- Condition Check
+	- Worker memonitor last_seen_ts.
+	- Jika (now - last_seen_ts) > 5 menit → generate alert.
+
+- Kirim Notifikasi WhatsApp
+Format pesan:
+===========================================
+[ALERT] EMP001 - <Nama Karyawan>
+Status: OUT OF AREA (last seen 6 min ago)
+Location: Entrance Zone
+Notified to: Supervisor - <Nama Supervisor>
+===========================================
+
+5. Reporting & Dashboard
+- Dashboard Web (Flask + HTML/CSS)
+	- Realtime presence list:
+		- Employee Name | Status | Last Seen (X min ago) | Location.
+	- Event log: detil kapan masuk/keluar area.
+	- Export CSV/PDF untuk HR.
+
+- Daily Report (via WhatsApp/Email)
+	- Cronjob jam 17:30 → generate laporan harian:
+		- Daftar hadir, telat, absen.
+		- Total jam kerja.
+	- Kirim otomatis ke HR & Manager.
+
+6. Integration & Compliance
+- Sistem bisa push data ke ERP/HRIS (via API).
+- Retensi data: snapshot wajah max 30 hari.
+- Embedding disimpan permanen sampai karyawan resign.
+
+⚡ Jadi alurnya sederhana:
+CCTV → AI Recognition → Event (Last Seen) → Presence Status → Alert (WhatsAp) → Attendance Report.
+=========================================================================================
+Alur Sequence:
+1. CCTV Camera → Edge Device
+- Mengirim video stream (RTSP).
+
+2. Edge Device (AI Module)
+- Deteksi wajah → ekstrak embedding → identifikasi employee.
+- Jika terdeteksi → kirim event ke Database:
+	- Event: {employee_id, camera_id, ts, sim_score, last_seen}
+	
+3.Presence Tracker → Database
+- Cek event terbaru per employee.
+- Update status: available / off.
+- Jika available pertama kali hari itu → update attendance.first_in_ts.
+- Jika status berubah ke off → update attendance.last_out_ts.
+
+4. Presence Tracker → Alert Engine
+- Jika (now - last_seen) > 5m → trigger alert.
+
+5. Alert Engine → Database
+- Catat alert (log, level, employee_id, ts).
+- Ambil supervisor dari tabel OrgHierarchy.
+
+6. Alert Engine → WhatsApp API
+- Kirim pesan ke supervisor langsung.
+
+7. Supervisor → WhatsApp
+- Menerima notifikasi:
+
+[ALERT] EMP001 - <Nama Karyawan>
+Status: OUT OF AREA (last seen 6 min ago)
+Location: Entrance Zone
+
+
+8. Dashboard (Flask Web) → Database
+- HR atau Supervisor buka dashboard.
+- Menampilkan:
+	- Daftar hadir sekarang.
+	- Last seen (X min ago).
+	- Event log per kamera.
+
+9. Scheduler (daily cron) → Database
+- Generate laporan harian attendance.
+- Kirim otomatis ke WhatsApp HR/Manager.
+
+Ringkas Alurnya:
+CCTV → Edge Device → Database → Presence Tracker 
+   → Alert Engine → WhatsApp API → Supervisor
+
+Dashboard (HR) → Database → View Reports
+Scheduler → Database → WhatsApp HR

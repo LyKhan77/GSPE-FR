@@ -1,0 +1,2860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <title>Auto-Monitoring Dashboard</title>
+  <style>
+    /* globals.css */
+    /* Global styles and variables */
+    :root {
+      --primary-blue: #003473;
+      --secondary-blue: #0056b3;
+      --success-green: #00ff15;
+      --error-red: #ff0000;
+      --warning-yellow: #ffff00;
+      --text-dark: #554d4d;
+      --text-light: #ffffff;
+      --background-light: #f4f4f4;
+      --background-white: #ffffff;
+      --border-gray: #c6c6c6;
+      --shadow-color: #00000040;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", Helvetica, Arial, sans-serif;
+      background-color: var(--background-light);
+      color: var(--text-dark);
+      height: 100vh;
+      overflow: hidden; /* No scroll on body */
+    }
+
+    /* Dashboard Layout */
+    .dashboard {
+      display: grid;
+      grid-template-areas: 
+        "header header header"
+        "sidebar main employee";
+      grid-template-columns: 211px 1fr 466px;
+      grid-template-rows: 105px 1fr;
+      height: 100vh;
+      background-color: var(--background-light);
+      font-family: "Inter", Helvetica;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      grid-area: header;
+      background-color: var(--background-white);
+      box-shadow: 0px 0px 2px 1px var(--shadow-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      width: 83px;
+      height: 83px;
+      object-fit: cover;
+    }
+
+    .company-name {
+      font-weight: 900;
+      color: var(--primary-blue);
+      font-size: 14px;
+      max-width: 142px;
+    }
+
+    .welcome-title {
+      font-weight: 600;
+      color: var(--primary-blue);
+      font-size: 50px;
+      margin: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .datetime {
+      text-align: right;
+    }
+
+    .time {
+      font-weight: 700;
+      color: var(--primary-blue);
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .date {
+      font-weight: 500;
+      color: var(--text-dark);
+      font-size: 15px;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      width: 50px;
+      height: 50px;
+      background-color: var(--background-white);
+      border-radius: 10px;
+      border: 1px solid #979797;
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background-color: #f8f8f8;
+      transform: translateY(-1px);
+    }
+
+    .icon-btn img {
+      width: 35px;
+      height: 35px;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      grid-area: sidebar;
+      background-color: var(--background-white);
+      box-shadow: 0px 0px 2px 1px var(--shadow-color);
+      display: flex;
+      flex-direction: column;
+      padding: 30px 14px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 17px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: "Inter", Helvetica;
+      font-weight: 500;
+      font-size: 24px;
+      color: var(--primary-blue);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+      color: var(--text-light);
+    }
+
+    .nav-item:hover:not(.active) {
+      background-color: #f0f0f0;
+    }
+
+    .nav-item img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 20px;
+    }
+
+    .copyright {
+      font-weight: 700;
+      color: #000000;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* Main Content */
+    .main-content {
+      grid-area: main;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      overflow-y: visible;
+      /* Allow content to grow */
+      height: fit-content;
+      min-height: 0;
+    }
+
+    /* CCTV Feed */
+    .cctv-feed {
+      background-color: var(--background-white);
+      border-radius: 30px;
+      border: 1px solid var(--border-gray);
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      padding: 30px;
+      flex: 1;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .section-header h2 {
+      font-weight: 700;
+      color: var(--primary-blue);
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .ai-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+      color: var(--text-dark);
+    }
+
+    .status-indicator-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      grid-column: 2;
+      grid-row: 1 / 3;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--error-red);
+    }
+
+    .status-indicator.available {
+      background-color: var(--success-green);
+      animation: pulse 1.5s infinite;
+    }
+    
+    .status-indicator.offline {
+      background-color: var(--error-red);
+    }
+    
+    .status-text {
+      font-size: 14px;
+      color: var(--text-dark);
+      font-weight: 500;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      height: 430px;
+      background-color: var(--background-white);
+      border-radius: 15px;
+      border: 1px solid var(--border-gray);
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      overflow: hidden;
+    }
+
+    .video-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 60px;
+      color: #000000;
+      background-color: #f8f8f8;
+    }
+
+    #live-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Camera Controls */
+    .camera-controls {
+      background-color: var(--background-white);
+      border-radius: 30px;
+      border: 1px solid var(--border-gray);
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      padding: 30px;
+    }
+
+    .camera-controls h2 {
+      font-weight: 700;
+      color: var(--primary-blue);
+      font-size: 32px;
+      margin: 0 0 30px 0;
+    }
+
+    .camera-buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .camera-btn {
+      width: 96px;
+      height: 95px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      border: none;
+      cursor: pointer;
+      font-family: "Inter", Helvetica;
+      font-weight: 700;
+      font-size: 32px;
+      transition: all 0.2s ease;
+    }
+
+    .camera-btn.active {
+      background-color: var(--primary-blue);
+      color: var(--text-light);
+    }
+
+    .camera-btn:not(.active) {
+      background-color: var(--background-white);
+      color: var(--text-dark);
+      border: 1px solid #979797;
+    }
+
+    .camera-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0px 4px 8px #00000020;
+    }
+
+    /* Employee Panel */
+    .employee-panel {
+      grid-area: employee;
+      background-color: var(--background-white);
+      border-radius: 30px;
+      border: 1px solid var(--border-gray);
+      box-shadow: 0px 0px 2px var(--shadow-color);
+      margin: 30px 30px 30px 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      /* Allow panel to grow with content */
+      height: fit-content;
+      min-height: 200px; /* Minimum height */
+      max-height: none; /* Remove maximum height restriction */
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .panel-header h2 {
+      font-weight: 700;
+      color: var(--primary-blue);
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .active-count {
+      background-color: var(--background-white);
+      border-radius: 10px;
+      border: 1px solid #979797;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-dark);
+    }
+
+    .employee-list {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 30px;
+    }
+
+    .employee-item {
+      background-color: var(--background-white);
+      border-radius: 15px;
+      border: 1px solid #e0e0e0;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      transition: all 0.2s ease;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .employee-name {
+      font-weight: 600;
+      color: var(--text-dark);
+      font-size: 16px;
+      margin: 0;
+    }
+    
+    .employee-camera {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin: 0;
+    }
+
+    .employee-cam {
+      font-size: 15px;
+      color: var(--text-dark);
+      margin: 4px 0 0 0;
+    }
+
+    .employee-status {
+      grid-column: 2;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--text-dark);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--error-red);
+    }
+
+    .status-dot.available {
+      background-color: var(--success-green);
+    }
+
+    .employee-actions {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .employee-time {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    .employee-avatar {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+    }
+    
+    .employee-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    
+    .employee-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .status-indicator-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ccc;
+    }
+    
+    .status-indicator.available {
+      background-color: var(--success-green);
+    }
+    
+    .status-indicator.offline {
+      background-color: var(--error-red);
+    }
+    
+    .status-text {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    
+    .status_time {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    
+    .status_time::before {
+      content: "🕐";
+      font-size: 10px;
+    }
+
+    .track-btn {
+      background-color: var(--background-white);
+      border-radius: 8px;
+      border: 1px solid #d0d0d0;
+      padding: 6px 12px;
+      color: var(--text-dark);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .track-btn:hover {
+      background-color: #f0f0f0;
+      border-color: var(--primary-blue);
+    }
+    
+    .track-btn:active {
+      background-color: var(--primary-blue);
+      color: white;
+    }
+
+    .employee-stats {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-weight: 800;
+      color: var(--text-dark);
+      font-size: 50px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-item.alert .stat-number {
+      color: var(--error-red);
+    }
+
+    .stat-label {
+      font-size: 15px;
+      color: var(--text-dark);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .dashboard {
+        grid-template-columns: 211px 1fr 400px;
+      }
+      
+      .welcome-title {
+        font-size: 36px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-areas: 
+          "header"
+          "main";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      
+      .sidebar,
+      .employee-panel {
+        display: none;
+      }
+      
+      .header {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        height: auto;
+      }
+      
+      .welcome-title {
+        font-size: 24px;
+      }
+    }
+
+    /* Utility Classes */
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .error {
+      color: var(--error-red) !important;
+      border-color: var(--error-red) !important;
+    }
+
+    .success {
+      color: var(--success-green) !important;
+      border-color: var(--success-green) !important;
+    }
+
+    /* style.css */
+    /* Dashboard Layout */
+    .dashboard {
+      display: grid;
+      grid-template-areas: 
+        "header header header"
+        "sidebar main employee";
+      grid-template-columns: 211px 1fr 466px;
+      grid-template-rows: 105px 1fr;
+      height: 100vh;
+      max-height: 100vh;
+      background-color: #f4f4f4;
+      font-family: "Inter", Helvetica;
+      overflow: hidden; /* Prevent overall page scroll */
+    }
+
+    /* Ensure proper scrolling */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      grid-area: header;
+      background-color: #ffffff;
+      box-shadow: 0px 0px 2px 1px #00000040;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .logo {
+      width: 83px;
+      height: 83px;
+      object-fit: cover;
+    }
+
+    .company-name {
+      font-weight: 900;
+      font-size: 20px;
+      color: #003473;
+      max-width: 400px;
+    }
+
+    .welcome-title {
+      font-weight: 600;
+      color: #003473;
+      font-size: 50px;
+      margin: 0;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .datetime {
+      text-align: right;
+    }
+
+    .time {
+      font-weight: 700;
+      color: #003473;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .date {
+      font-weight: 500;
+      color: #554d4d;
+      font-size: 15px;
+    }
+
+    .user-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .icon-btn {
+      width: 50px;
+      height: 50px;
+      background-color: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #979797;
+      box-shadow: 0px 0px 2px #00000040;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background-color: #f8f8f8;
+      transform: translateY(-1px);
+    }
+
+    .icon-btn img {
+      width: 35px;
+      height: 35px;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      grid-area: sidebar;
+      background-color: #ffffff;
+      box-shadow: 0px 0px 2px 1px #00000040;
+      display: flex;
+      flex-direction: column;
+      padding: 30px 14px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 17px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: "Inter", Helvetica;
+      font-weight: 500;
+      font-size: 24px;
+      color: #003473;
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #003473 0%, #0056b3 100%);
+      color: #ffffff;
+    }
+
+    .nav-item:hover:not(.active) {
+      background-color: #f0f0f0;
+    }
+
+    .nav-item img {
+      width: 30px;
+      height: 30px;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding-top: 20px;
+    }
+
+    .copyright {
+      font-weight: 700;
+      color: #000000;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* Main Content */
+    .main-content {
+      grid-area: main;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+      overflow-y: auto; /* Enable scroll for main content */
+      max-height: calc(100vh - 105px);
+    }
+
+    /* CCTV Feed */
+    .cctv-feed {
+      background-color: #ffffff;
+      border-radius: 30px;
+      border: 1px solid #c6c6c6;
+      box-shadow: 0px 0px 2px #00000040;
+      padding: 30px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-shrink: 0;
+    }
+
+    .section-header h2 {
+      font-weight: 700;
+      color: #003473;
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .ai-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 20px;
+      color: #554d4d;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ff0000;
+      box-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+      transition: all 0.3s ease;
+    }
+
+    .status-indicator.active {
+      background-color: #00ff15;
+      box-shadow: 0 0 10px rgba(0, 255, 21, 0.7);
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      min-height: 500px; /* Minimum height */
+      background-color: #ffffff;
+      border-radius: 15px;
+      border: 1px solid #c6c6c6;
+      box-shadow: 0px 0px 2px #00000040;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .video-stream-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #000000;
+    }
+
+    .video-stream {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      display: none;
+    }
+
+    .video-stream.fullscreen {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 40px; /* Reduced font size for better fit */
+      color: #000000;
+      background-color: #f8f8f8;
+    }
+
+    .fullscreen-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      border: none;
+      border-radius: 5px;
+      padding: 8px;
+      cursor: pointer;
+      z-index: 10;
+      display: none;
+    }
+
+    .fullscreen-toggle:hover {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #003473;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-top: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Camera Controls */
+    .camera-controls {
+      background-color: #ffffff;
+      border-radius: 30px;
+      border: 1px solid #c6c6c6;
+      box-shadow: 0px 0px 2px #00000040;
+      padding: 30px;
+      flex-shrink: 0;
+    }
+
+    .camera-controls h2 {
+      font-weight: 700;
+      color: #003473;
+      font-size: 32px;
+      margin: 0 0 30px 0;
+    }
+
+    .camera-buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .camera-btn {
+      width: 96px;
+      height: 95px;
+      border-radius: 10px;
+      box-shadow: 0px 0px 2px #00000040;
+      border: none;
+      cursor: pointer;
+      font-family: "Inter", Helvetica;
+      font-weight: 700;
+      font-size: 32px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .camera-btn.active {
+      background: linear-gradient(135deg, #003473 0%, #0056b3 100%);
+      color: #ffffff;
+      box-shadow: 0px 4px 12px rgba(0, 52, 115, 0.4);
+    }
+
+    .camera-btn:not(.active) {
+      background-color: #ffffff;
+      color: #554d4d;
+      border: 1px solid #979797;
+    }
+
+    .camera-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .camera-btn.active::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.1);
+      pointer-events: none;
+    }
+
+    /* Employee Panel */
+    .employee-panel {
+      grid-area: employee;
+      background-color: #ffffff;
+      border-radius: 30px;
+      border: 1px solid #c6c6c6;
+      box-shadow: 0px 0px 2px #00000040;
+      margin: 30px 30px 30px 0;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      /* Fixed height with scroll when content exceeds viewport */
+      height: calc(100vh - 165px);
+      min-height: 200px;
+      max-height: calc(100vh - 165px);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-shrink: 0; /* Prevent header from shrinking */
+      min-height: 40px; /* Ensure minimum height */
+    }
+
+    .panel-header h2 {
+      font-weight: 700;
+      color: #003473;
+      font-size: 32px;
+      margin: 0;
+    }
+
+    .active-count {
+      background-color: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #979797;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #554d4d;
+    }
+
+    .employee-list {
+      flex: 1;
+      overflow-y: auto; /* Add scroll for long employee lists */
+      margin-bottom: 30px;
+      min-height: 0;
+      padding-right: 5px; /* Space for scrollbar */
+      /* Custom scrollbar styling */
+      scrollbar-width: thin;
+      scrollbar-color: #003473 #f0f0f0;
+    }
+
+    /* Custom scrollbar for Webkit browsers */
+    .employee-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .employee-list::-webkit-scrollbar-track {
+      background: #f0f0f0;
+      border-radius: 4px;
+    }
+
+    .employee-list::-webkit-scrollbar-thumb {
+      background: #003473;
+      border-radius: 4px;
+    }
+
+    .employee-list::-webkit-scrollbar-thumb:hover {
+      background: #0056b3;
+    }
+
+    .employee-item {
+      background-color: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #c3c3c3;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 8px 12px;
+      align-items: center;
+      /* Ensure proper sizing */
+      min-height: 80px; /* Minimum height for consistent spacing */
+    }
+
+    .employee-info {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .employee-name {
+      font-weight: 700;
+      color: #554d4d;
+      font-size: 20px;
+      margin: 0;
+    }
+
+    .employee-cam {
+      font-size: 15px;
+      color: #554d4d;
+      margin: 4px 0 0 0;
+    }
+
+    .employee-status {
+      grid-column: 2;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: #554d4d;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ff0000;
+    }
+
+    .status-dot.available {
+      background-color: #00ff15;
+    }
+
+    .employee-actions {
+      grid-column: 1;
+      grid-row: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .employee-time {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: #554d4d;
+    }
+
+    .employee-avatar {
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      object-fit: cover;
+      /* Ensure SVG avatars display properly */
+      flex-shrink: 0;
+    }
+
+    .track-btn {
+      background-color: #ffffff;
+      border-radius: 10px;
+      border: 1px solid #979797;
+      padding: 6px 6px 6px 6px;
+      font-size: 12px;
+      color: #554d4d;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .track-btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    .employee-stats {
+      display: flex;
+      justify-content: space-between;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      flex-shrink: 0;
+      align-self: stretch;
+      /* Keep stats at bottom */
+      margin-top: auto;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-number {
+      font-weight: 800;
+      color: #554d4d;
+      font-size: 50px;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-item.alert .stat-number {
+      color: #ff0000;
+    }
+
+    .stat-label {
+      font-size: 15px;
+      color: #554d4d;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .dashboard {
+        grid-template-columns: 211px 1fr 400px;
+      }
+      
+      .welcome-title {
+        font-size: 36px;
+      }
+      
+      .employee-panel {
+        max-width: 400px; /* Limit width on smaller screens */
+      }
+    }
+
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-areas: 
+          "header"
+          "main";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+      }
+      
+      .sidebar,
+      .employee-panel {
+        display: none;
+      }
+      
+      .header {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+        height: auto;
+      }
+      
+      .welcome-title {
+        font-size: 24px;
+      }
+      
+      .main-content {
+        padding: 15px;
+        gap: 15px;
+      }
+    }
+
+    /* Utility Classes */
+    .hidden {
+      display: none !important;
+    }
+
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    .error {
+      color: #ff0000 !important;
+      border-color: #ff0000 !important;
+    }
+
+    .success {
+      color: #00ff15 !important;
+      border-color: #00ff15 !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-section">
+        <img class="logo" src="src/gspe.png" alt="Logo" />
+        <div class="company-name">Auto-Monitoring System</div>
+      </div>
+      
+      <h1 class="welcome-title">Welcome to Dashboard</h1>
+      
+      <div class="header-right">
+        <div class="datetime">
+          <div class="time" id="current-time">15:23:00</div>
+          <div class="date" id="current-date">20 August 2025</div>
+        </div>
+        <div class="user-actions">
+          <button class="icon-btn" id="notifications-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bell-icon lucide-bell"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+            <!-- <img src="src/cctv.png" alt="Notifications" /> -->
+          </button>
+          <button class="icon-btn" id="setting-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="gray" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings-icon lucide-settings"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg>
+            <!-- <img src="src/gspe.png" alt="Setting" /> -->
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <button class="nav-item active" data-section="cctv">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cctv-icon lucide-cctv"><path d="M16.75 12h3.632a1 1 0 0 1 .894 1.447l-2.034 4.069a1 1 0 0 1-1.708.134l-2.124-2.97"/><path d="M17.106 9.053a1 1 0 0 1 .447 1.341l-3.106 6.211a1 1 0 0 1-1.342.447L3.61 12.3a2.92 2.92 0 0 1-1.3-3.91L3.69 5.6a2.92 2.92 0 0 1 3.92-1.3z"/><path d="M2 19h3.76a2 2 0 0 0 1.8-1.1L9 15"/><path d="M2 21v-4"/><path d="M7 9h.01"/></svg>
+        <!-- <img src="src/CCTVButton.png" alt="CCTV" /> -->
+        <span>CCTV</span>
+      </button>
+      <button class="nav-item" data-section="report">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-chart-column-icon lucide-file-chart-column"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M8 18v-1"/><path d="M12 18v-6"/><path d="M16 18v-3"/></svg>
+        <!-- <img src="src/ReportButton.png" alt="Report" /> -->
+        <span>Report</span>
+      </button>
+      <div class="sidebar-footer">
+        <div class="copyright">Copyright @ PT GSPE</div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Live CCTV Feed -->
+      <section class="cctv-feed">
+        <div class="section-header">
+          <h2>Live CCTV Feed</h2>
+          <div class="ai-status" id="ai-status">
+            <div class="status-indicator" id="ai-indicator"></div>
+            <span id="ai-status-text">AI Inference: Stopped</span>
+          </div>
+        </div>
+        <div class="video-container" id="video-container">
+          <div class="video-placeholder" id="video-placeholder">
+            <span>LIVE CCTV CAM</span>
+            <div class="loading-spinner" id="loading-spinner" style="display: none;"></div>
+          </div>
+          <!-- Face Recognition Stream will be inserted here by JavaScript -->
+          <div class="video-stream-container">
+            <img id="face-recognition-stream" class="video-stream" />
+          </div>
+          <!-- Fullscreen toggle button -->
+          <button class="fullscreen-toggle" id="fullscreen-toggle" title="Toggle Fullscreen">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- CCTV Camera Controls -->
+      <section class="camera-controls">
+        <h2>CCTV CAM</h2>
+        <div class="camera-buttons" id="camera-buttons">
+          <!-- Camera buttons will be populated by backend -->
+        </div>
+      </section>
+    </main>
+
+    <!-- Employee Tracking Panel -->
+    <aside class="employee-panel">
+      <div class="panel-header">
+        <h2>Employee Tracking</h2>
+        <div class="active-count" id="active-count">0 Active</div>
+      </div>
+      
+      <div class="employee-list" id="employee-list">
+        <!-- Employee entries will be populated by backend -->
+      </div>
+      
+      <div class="employee-stats">
+        <div class="stat-item">
+          <div class="stat-number" id="present-count">0</div>
+          <div class="stat-label">Present</div>
+        </div>
+        <div class="stat-item alert">
+          <div class="stat-number" id="alert-count">0</div>
+          <div class="stat-label">Alerts</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="total-count">0</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Scripts -->
+  <!-- Add WebSocket support -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script>
+    // Utility functions for the dashboard
+    class Utils {
+      // Format time to HH:MM:SS
+      static formatTime(date = new Date()) {
+        return date.toLocaleTimeString('en-US', { 
+          hour12: false,
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }
+
+      // Format date to DD Month YYYY
+      static formatDate(date = new Date()) {
+        return date.toLocaleDateString('en-US', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        });
+      }
+
+      // Debounce function for performance optimization
+      static debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+
+      // Show loading state
+      static showLoading(element) {
+        element.classList.add('loading');
+      }
+
+      // Hide loading state
+      static hideLoading(element) {
+        element.classList.remove('loading');
+      }
+
+      // Show error state
+      static showError(element, message = '') {
+        element.classList.add('error');
+        if (message) {
+          element.title = message;
+        }
+      }
+
+      // Hide error state
+      static hideError(element) {
+        element.classList.remove('error');
+        element.removeAttribute('title');
+      }
+
+      // Generate unique ID
+      static generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+      }
+
+      // Validate RTSP URL
+      static isValidRTSPUrl(url) {
+        try {
+          const urlObj = new URL(url);
+          return urlObj.protocol === 'rtsp:';
+        } catch {
+          return false;
+        }
+      }
+
+      // Log with timestamp
+      static log(message, type = 'info') {
+        const timestamp = new Date().toISOString();
+        const logMessage = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+        
+        switch (type) {
+          case 'error':
+            console.error(logMessage);
+            break;
+          case 'warn':
+            console.warn(logMessage);
+            break;
+          default:
+            console.log(logMessage);
+        }
+      }
+
+      // API request wrapper
+      static async apiRequest(url, options = {}) {
+        try {
+          const response = await fetch(url, {
+            headers: {
+              'Content-Type': 'application/json',
+              ...options.headers
+            },
+            ...options
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          return await response.json();
+        } catch (error) {
+          Utils.log(`API request failed: ${error.message}`, 'error');
+          throw error;
+        }
+      }
+    }
+
+    // Export for use in other modules
+    window.Utils = Utils;
+
+    // Camera management system for RTSP streams and camera controls
+    class CameraManager {
+      constructor() {
+        this.cameras = new Map();
+        this.currentCamera = null;
+        this.streamElement = null;
+        this.videoContainer = null;
+        this.placeholder = null;
+        this.loadingSpinner = null;
+        this.buttonsContainer = null;
+        this.fullscreenToggle = null;
+        this.isStreaming = false;
+        this.faceRecognitionActive = false;
+        this.socket = null;
+      }
+
+      // Initialize camera manager
+      init() {
+        this.streamElement = document.getElementById('face-recognition-stream');
+        this.videoContainer = document.getElementById('video-container');
+        this.placeholder = document.getElementById('video-placeholder');
+        this.loadingSpinner = document.getElementById('loading-spinner');
+        this.buttonsContainer = document.getElementById('camera-buttons');
+        this.fullscreenToggle = document.getElementById('fullscreen-toggle');
+
+        if (!this.videoContainer || !this.placeholder || !this.buttonsContainer) {
+          Utils.log('Camera manager initialization failed: Required elements not found', 'error');
+          return false;
+        }
+
+        // Initialize Socket.IO connection for camera streaming
+        this.initCameraSocket();
+        
+        // Initialize fullscreen toggle
+        this.initFullscreenToggle();
+
+        Utils.log('Camera manager initialized successfully');
+        return true;
+      }
+
+      // Initialize Socket.IO connection for camera streaming
+      initCameraSocket() {
+        try {
+          this.socket = io('/camera');
+          
+          // Listen for camera frames
+          this.socket.on('camera_frame', (data) => {
+            if (this.streamElement) {
+              // Handle different types of frame data
+              if (data.frame) {
+                // Check if this is an error frame
+                if (typeof data.frame === 'string' && 
+                    (data.frame === 'Camera Unavailable' || 
+                     data.frame.includes("Camera Unavailable") || 
+                     data.frame.includes("Failed to open video stream") ||
+                     data.frame.includes("Camera Error"))) {
+                  this.showCameraError("Camera Unavailable");
+                } else {
+                  // Clear any previous error messages
+                  this.clearCameraError();
+                  // Show the video stream when we receive a normal frame
+                  this.showFaceRecognitionStream();
+                  // Handle both string and object frame data
+                  if (typeof data.frame === 'string') {
+                    this.streamElement.src = "data:image/jpeg;base64," + data.frame;
+                  } else {
+                    // If frame is not a string, it might be an object - convert to string
+                    this.streamElement.src = "data:image/jpeg;base64," + String(data.frame);
+                  }
+                }
+              }
+            }
+          });
+          
+          // Listen for AI status updates
+          this.socket.on('ai_status_update', (data) => {
+            if (window.dashboard) {
+              window.dashboard.updateAIInferenceStatus(data.active);
+            }
+          });
+          
+        } catch (error) {
+          console.error(`Camera Socket.IO initialization failed: ${error.message}`);
+        }
+      }
+
+      // Add camera configuration
+      addCamera(cameraConfig) {
+        const camera = {
+          id: cameraConfig.id || cameraConfig.name || Utils.generateId(),
+          name: cameraConfig.name || `Camera ${this.cameras.size + 1}`,
+          rtspUrl: cameraConfig.rtspUrl || cameraConfig.rtsp_url || '',
+          isActive: cameraConfig.isActive || false,
+          status: cameraConfig.status || 'offline' // online, offline, error
+        };
+
+        this.cameras.set(camera.id, camera);
+        this.renderCameraButton(camera);
+        
+        Utils.log(`Camera added: ${camera.name} (${camera.id})`);
+        return camera.id;
+      }
+
+      // Load cameras from backend
+      async loadCameras(cameraConfigs) {
+        try {
+          // Clear existing cameras
+          this.clearCameras();
+
+          // Add new cameras
+          if (Array.isArray(cameraConfigs)) {
+            cameraConfigs.forEach(config => this.addCamera(config));
+          }
+
+          Utils.log(`Loaded ${this.cameras.size} cameras`);
+          return true;
+        } catch (error) {
+          Utils.log(`Failed to load cameras: ${error.message}`, 'error');
+          return false;
+        }
+      }
+
+      // Clear all cameras
+      clearCameras() {
+        this.stopStream();
+        this.cameras.clear();
+        if (this.buttonsContainer) {
+          this.buttonsContainer.innerHTML = '';
+        }
+        this.currentCamera = null;
+      }
+
+      // Render camera button
+      renderCameraButton(camera) {
+        if (!this.buttonsContainer) return;
+        
+        const button = document.createElement('button');
+        button.className = `camera-btn ${camera.isActive ? 'active' : ''}`;
+        button.setAttribute('data-camera-id', camera.id);
+        button.textContent = camera.name.replace('Camera ', '');
+        
+        // Add click handler
+        button.addEventListener('click', () => this.selectCamera(camera.id));
+        
+        this.buttonsContainer.appendChild(button);
+      }
+
+      // Select and activate camera
+      async selectCamera(cameraId) {
+        console.log(`[CAMERA MANAGER] Selecting camera: ${cameraId}`);
+        const camera = this.cameras.get(cameraId);
+        if (!camera) {
+          console.error(`[CAMERA MANAGER] Camera not found: ${cameraId}`);
+          return false;
+        }
+
+        // Update UI - deactivate all buttons
+        if (this.buttonsContainer) {
+          this.buttonsContainer.querySelectorAll('.camera-btn').forEach(btn => {
+            btn.classList.remove('active');
+          });
+        }
+
+        // Activate selected button
+        if (this.buttonsContainer) {
+          const selectedButton = this.buttonsContainer.querySelector(`[data-camera-id="${cameraId}"]`);
+          if (selectedButton) {
+            selectedButton.classList.add('active');
+          }
+        }
+
+        // Update camera states
+        this.cameras.forEach(cam => cam.isActive = false);
+        camera.isActive = true;
+        this.currentCamera = camera;
+
+        // Start streaming
+        console.log(`[CAMERA MANAGER] Starting stream for camera: ${camera.name}`);
+        const success = await this.startStream(camera);
+        if (!success) {
+          console.error('[CAMERA MANAGER] Failed to start camera stream');
+          this.showCameraError('Failed to start camera stream');
+        }
+        
+        console.log(`[CAMERA MANAGER] Camera selected: ${camera.name}`);
+        return success;
+      }
+
+      // Start RTSP stream
+      async startStream(camera) {
+        if (!camera || !camera.rtspUrl) {
+          console.log('[CAMERA MANAGER] Cannot start stream: Invalid camera or missing RTSP URL');
+          this.showCameraError('Camera Unavailable');
+          return false;
+        }
+
+        try {
+          console.log(`[CAMERA MANAGER] Starting stream for camera: ${camera.name} (${camera.rtspUrl})`);
+          this.showLoading();
+          
+          // Send start stream command to server
+          if (this.socket) {
+            this.socket.emit('start_stream', { rtsp_url: camera.rtspUrl });
+            console.log('[CAMERA MANAGER] Start stream command sent to server');
+          }
+          
+          return true;
+        } catch (error) {
+          console.error(`[CAMERA MANAGER] Failed to start stream: ${error.message}`);
+          this.showCameraError('Camera Unavailable');
+          return false;
+        }
+      }
+
+      // Stop current stream
+      stopStream() {
+        console.log('[CAMERA MANAGER] Stopping current stream');
+        if (this.socket && this.currentCamera) {
+          this.socket.emit('stop_stream', { rtsp_url: this.currentCamera.rtspUrl });
+          console.log('[CAMERA MANAGER] Stop stream command sent to server');
+        }
+        
+        if (this.streamElement) {
+          this.streamElement.src = '';
+        }
+        
+        this.isStreaming = false;
+        this.showPlaceholder();
+        
+        console.log('[CAMERA MANAGER] Stream stopped');
+      }
+
+      // Show face recognition stream
+      showFaceRecognitionStream() {
+        console.log('[CAMERA MANAGER] Showing face recognition stream');
+        // Only show video if we're not currently showing an error
+        if (this.placeholder && this.placeholder.innerHTML.includes("Camera Unavailable")) {
+          console.log('[CAMERA MANAGER] Camera unavailable, not showing stream');
+          return; // Don't override error message
+        }
+        
+        this.hideLoading();
+        this.showVideo();
+      }
+
+      // Clear any camera error messages
+      clearCameraError() {
+        console.log('[CAMERA MANAGER] Clearing camera error');
+        // Reset to normal placeholder if we were showing an error
+        if (this.placeholder && (this.placeholder.innerHTML.includes("Camera Unavailable") || 
+                                 this.placeholder.innerHTML.includes("Stream Error"))) {
+          this.showPlaceholder();
+        }
+      }
+
+      // Update camera status
+      updateCameraStatus(cameraId, status) {
+        const camera = this.cameras.get(cameraId);
+        if (!camera) return false;
+
+        camera.status = status;
+        
+        // Update button appearance based on status
+        if (this.buttonsContainer) {
+          const button = this.buttonsContainer.querySelector(`[data-camera-id="${cameraId}"]`);
+          if (button) {
+            button.classList.remove('error', 'success');
+            if (status === 'error') {
+              button.classList.add('error');
+            } else if (status === 'online') {
+              button.classList.add('success');
+            }
+          }
+        }
+
+        Utils.log(`Camera ${camera.name} status updated: ${status}`);
+        return true;
+      }
+
+      // UI state management
+      showLoading() {
+        console.log('[CAMERA MANAGER] Showing loading spinner');
+        if (this.placeholder) {
+          this.placeholder.innerHTML = '<span>LIVE CCTV CAM</span>';
+          const spinner = document.createElement('div');
+          spinner.className = 'loading-spinner';
+          spinner.id = 'loading-spinner';
+          spinner.style.display = 'block';
+          this.placeholder.appendChild(spinner);
+          this.placeholder.style.display = 'flex';
+        }
+        if (this.streamElement) this.streamElement.style.display = 'none';
+      }
+
+      hideLoading() {
+        // Remove loading spinner if it exists
+        const spinner = this.placeholder ? this.placeholder.querySelector('.loading-spinner') : null;
+        if (spinner) {
+          spinner.remove();
+        }
+      }
+
+      showVideo() {
+        if (this.placeholder) {
+          this.placeholder.style.display = 'none';
+        }
+        if (this.streamElement) {
+          this.streamElement.style.display = 'block';
+          // Add responsive sizing
+          this.streamElement.style.maxWidth = '100%';
+          this.streamElement.style.maxHeight = '100%';
+          this.streamElement.style.width = 'auto';
+          this.streamElement.style.height = 'auto';
+          this.streamElement.style.objectFit = 'contain';
+          
+          // Show fullscreen toggle button
+          if (this.fullscreenToggle) {
+            this.fullscreenToggle.style.display = 'block';
+          }
+        }
+      }
+
+      showPlaceholder() {
+        if (this.placeholder) {
+          this.placeholder.innerHTML = '<span>LIVE CCTV CAM</span>';
+          const spinner = document.createElement('div');
+          spinner.className = 'loading-spinner';
+          spinner.id = 'loading-spinner';
+          spinner.style.display = 'none';
+          this.placeholder.appendChild(spinner);
+          this.placeholder.style.display = 'flex';
+        }
+        if (this.streamElement) this.streamElement.style.display = 'none';
+        
+        // Hide fullscreen toggle button
+        if (this.fullscreenToggle) {
+          this.fullscreenToggle.style.display = 'none';
+        }
+      }
+
+      showError() {
+        this.hideLoading();
+        if (this.placeholder) {
+          this.placeholder.innerHTML = '<span style="color: #ff0000;">Stream Error</span>';
+        }
+        if (this.streamElement) this.streamElement.style.display = 'none';
+      }
+
+      // Show camera error message
+      showCameraError(errorMessage) {
+        this.hideLoading();
+        if (this.placeholder) {
+          this.placeholder.innerHTML = '<span style="color: #ff0000; font-size: 32px; font-weight: bold;">' + (errorMessage || "Camera Unavailable") + '</span>';
+          this.placeholder.style.display = 'flex';
+        }
+        if (this.streamElement) this.streamElement.style.display = 'none';
+        
+        // Hide fullscreen toggle button
+        if (this.fullscreenToggle) {
+          this.fullscreenToggle.style.display = 'none';
+        }
+      }
+
+      // Get current camera info
+      getCurrentCamera() {
+        return this.currentCamera;
+      }
+
+      // Get all cameras
+      getCameras() {
+        return Array.from(this.cameras.values());
+      }
+
+      // Check if streaming
+      isCurrentlyStreaming() {
+        return this.isStreaming;
+      }
+      
+      // Initialize fullscreen toggle button
+      initFullscreenToggle() {
+        if (this.fullscreenToggle && this.streamElement) {
+          this.fullscreenToggle.addEventListener('click', () => {
+            this.toggleFullscreen();
+          });
+          
+          // Show fullscreen button when stream is active
+          this.streamElement.addEventListener('load', () => {
+            if (this.streamElement.style.display !== 'none') {
+              this.fullscreenToggle.style.display = 'block';
+            }
+          });
+        }
+      }
+
+      // Toggle fullscreen mode
+      toggleFullscreen() {
+        if (this.streamElement) {
+          this.streamElement.classList.toggle('fullscreen');
+          const isFullscreen = this.streamElement.classList.contains('fullscreen');
+          
+          if (isFullscreen) {
+            this.streamElement.style.objectFit = 'cover';
+            this.fullscreenToggle.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 7h10v10M7 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/>
+              </svg>
+            `;
+          } else {
+            this.streamElement.style.objectFit = 'contain';
+            this.streamElement.style.width = 'auto';
+            this.streamElement.style.height = 'auto';
+            this.fullscreenToggle.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+              </svg>
+            `;
+          }
+        }
+      }
+    }
+
+    // Create global instance
+    window.cameraManager = new CameraManager();
+
+    // Global functions for backend integration
+    window.loadCameras = async function(cameraConfigs) {
+      return await window.cameraManager.loadCameras(cameraConfigs);
+    };
+
+    window.addCamera = function(cameraConfig) {
+      return window.cameraManager.addCamera(cameraConfig);
+    };
+
+    window.selectCamera = async function(cameraId) {
+      return await window.cameraManager.selectCamera(cameraId);
+    };
+
+    window.updateCameraStatus = function(cameraId, status) {
+      return window.cameraManager.updateCameraStatus(cameraId, status);
+    };
+
+    // Employee management system
+    class EmployeeManager {
+      constructor() {
+        this.employees = new Map();
+        this.container = null;
+        this.activeCountElement = null;
+        this.statsElements = {
+          present: null,
+          alert: null,
+          total: null
+        };
+      }
+
+      // Initialize employee manager
+      init() {
+        this.container = document.getElementById('employee-list');
+        this.activeCountElement = document.getElementById('active-count');
+        this.statsElements = {
+          present: document.getElementById('present-count'),
+          alert: document.getElementById('alert-count'),
+          total: document.getElementById('total-count')
+        };
+
+        if (!this.container || !this.activeCountElement) {
+          Utils.log('Employee manager initialization failed: Required elements not found', 'error');
+          return false;
+        }
+
+        Utils.log('Employee manager initialized successfully');
+        return true;
+      }
+
+      // Get default avatar for employees
+      getDefaultAvatar() {
+        return '/static/src/avatars/default-avatar.png';
+      }
+
+      // Add single employee
+      addEmployee(employeeData) {
+        const employee = {
+          id: employeeData.id || Utils.generateId(),
+          name: employeeData.name || `Employee ${this.employees.size + 1}`,
+          status: employeeData.status || 'off', // 'available' or 'off'
+          lastSeen: employeeData.lastSeen || 'Now',
+          avatar: employeeData.avatar || this.getDefaultAvatar(),
+          cameraId: employeeData.cameraId || null,
+          location: employeeData.location || 'Unknown',
+          cameraName: employeeData.cameraName || this.getCameraNameById(employeeData.cameraId) || 'Unknown'
+        };
+
+        this.employees.set(employee.id, employee);
+        this.renderEmployee(employee);
+        this.updateStats();
+        
+        Utils.log(`Employee added: ${employee.name} (${employee.id})`);
+        return employee.id;
+      }
+
+      // Load employees from backend
+      async loadEmployees(employeeData) {
+        try {
+          this.clearEmployees();
+          
+          if (Array.isArray(employeeData)) {
+            employeeData.forEach(emp => {
+              // Normalize employee data format
+              const normalizedEmp = {
+                id: emp.employee_id || emp.id,
+                name: emp.employee_name || emp.name,
+                status: emp.status || 'UNAVAILABLE',
+                lastSeen: emp.last_seen || emp.lastSeen,
+                cameraId: emp.camera_id || emp.cameraId,
+                cameraName: emp.camera_name || emp.cameraName
+              };
+              this.addEmployee(normalizedEmp);
+            });
+          }
+          
+          Utils.log(`Loaded ${this.employees.size} employees`);
+          return true;
+        } catch (error) {
+          Utils.log(`Failed to load employees: ${error.message}`, 'error');
+          return false;
+        }
+      }
+
+      // Clear all employees
+      clearEmployees() {
+        this.employees.clear();
+        this.container.innerHTML = '';
+        this.updateStats();
+      }
+
+      // Render single employee
+      renderEmployee(employee) {
+        const employeeElement = document.createElement('div');
+        employeeElement.className = 'employee-item';
+        employeeElement.setAttribute('data-employee-id', employee.id);
+        
+        // Determine status based on employee data
+        const isAvailable = employee.status === 'AVAILABLE' || employee.status === 'available';
+        const statusText = isAvailable ? 'Available' : 'Offline';
+        const statusClass = isAvailable ? 'available' : 'offline';
+        
+        // Format time display
+        const timeDisplay = this.formatTimeDisplay(employee.lastSeen, isAvailable);
+        
+        // Get camera name from employee data or resolve from camera ID
+        const cameraName = employee.cameraName || this.getCameraNameById(employee.cameraId) || 'Unknown';
+        
+        employeeElement.innerHTML = `
+          <div class="employee-name">${employee.name}</div>
+          <div class="employee-camera">&lt;${cameraName}&gt;</div>
+          <div class="employee-row">
+            <div class="employee-left">
+              <div class="status-indicator-wrapper">
+                <div class="status-indicator ${statusClass}"></div>
+                <span class="status-text">&lt;${statusText}&gt;</span>
+              </div>
+              <div class="status_time">&lt;${timeDisplay}&gt;</div>
+            </div>
+            <button class="track-btn" data-action="track" data-employee-id="${employee.id}" data-camera-id="${employee.cameraId || ''}">Track Location</button>
+          </div>
+        `;
+
+        // Add event listeners
+        const trackBtn = employeeElement.querySelector('.track-btn');
+        trackBtn.addEventListener('click', () => this.trackEmployee(employee.id, employee.cameraId));
+
+        this.container.appendChild(employeeElement);
+      }
+
+      // Update employee status
+      updateEmployeeStatus(employeeId, status, lastSeen = null, location = null) {
+        let employee = this.employees.get(employeeId);
+        if (!employee) {
+          // Try to create employee if not found (for real-time updates)
+          Utils.log(`Employee ${employeeId} not found, creating new entry`);
+          employee = {
+            id: employeeId,
+            name: `Employee ${employeeId}`,
+            status: status || 'UNAVAILABLE',
+            lastSeen: lastSeen,
+            cameraId: location,
+            cameraName: this.getCameraNameById(location) || 'Unknown'
+          };
+          this.employees.set(employeeId, employee);
+          this.renderEmployee(employee);
+        }
+
+        employee.status = status;
+        if (lastSeen) employee.lastSeen = lastSeen;
+        if (location) employee.location = location;
+        if (location) {
+          employee.cameraId = location;
+          employee.cameraName = this.getCameraNameById(location) || location;
+        }
+
+        // Update DOM
+        const employeeElement = this.container.querySelector(`[data-employee-id="${employeeId}"]`);
+        if (employeeElement) {
+          const statusDot = employeeElement.querySelector('.status-dot');
+          const statusText = employeeElement.querySelector('.employee-status span');
+          const timeText = employeeElement.querySelector('.employee-time span');
+          const camText = employeeElement.querySelector('.employee-cam');
+
+          if (statusDot) {
+            statusDot.className = `status-dot ${status === 'available' ? 'available' : ''}`;
+          }
+          if (statusText) statusText.textContent = status;
+          if (timeText && lastSeen) timeText.textContent = lastSeen;
+          if (camText) camText.textContent = this.getCameraNameById(location) || location || 'Unknown';
+        }
+
+        this.updateStats();
+        Utils.log(`Employee ${employee.name} status updated: ${status}`);
+        return true;
+      }
+
+      // Track employee location
+      trackEmployee(employeeId, cameraId) {
+        Utils.log(`Tracking employee: ${employeeId} at camera: ${cameraId}`);
+        
+        if (!cameraId) {
+          Utils.log('No camera ID available for tracking', 'warn');
+          alert('Employee location not available');
+          return;
+        }
+        
+        // Switch to the camera where employee was last seen
+        if (window.cameraManager) {
+          const cameras = window.cameraManager.getCameras();
+          const targetCamera = cameras.find(cam => cam.id === cameraId || cam.name === cameraId);
+          
+          if (targetCamera) {
+            window.cameraManager.switchCamera(targetCamera.id);
+            Utils.log(`Switched to camera: ${targetCamera.name || targetCamera.id}`);
+          } else {
+            Utils.log(`Camera not found: ${cameraId}`, 'warn');
+            alert(`Camera ${cameraId} not available`);
+          }
+        } else {
+          Utils.log('Camera manager not available', 'error');
+          alert('Camera system not available');
+        }
+      }    
+      
+      // Get employees by status
+      getEmployeesByStatus(status) {
+        return Array.from(this.employees.values()).filter(emp => emp.status === status);
+      }
+
+      // Get camera name by ID
+      getCameraNameById(cameraId) {
+        if (!cameraId || !window.cameraManager) return null;
+        const cameras = window.cameraManager.getCameras();
+        const camera = cameras.find(cam => cam.id === cameraId || cam.name === cameraId);
+        return camera ? camera.name : null;
+      }
+      
+      // Format time display for employee status
+      formatTimeDisplay(lastSeen, isAvailable) {
+        if (isAvailable) {
+          return 'just now';
+        }
+        
+        if (!lastSeen) {
+          return 'never seen';
+        }
+        
+        // Parse lastSeen if it's a string
+        let lastSeenDate;
+        if (typeof lastSeen === 'string') {
+          lastSeenDate = new Date(lastSeen);
+        } else if (lastSeen instanceof Date) {
+          lastSeenDate = lastSeen;
+        } else {
+          return 'unknown';
+        }
+        
+        const now = new Date();
+        const diffMs = now - lastSeenDate;
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMinutes / 60);
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffMinutes < 1) {
+          return 'just now';
+        } else if (diffMinutes < 60) {
+          return `${diffMinutes}m ago`;
+        } else if (diffHours < 24) {
+          return `${diffHours}h ago`;
+        } else {
+          return `${diffDays}d ago`;
+        }
+      }
+
+      // Search employees
+      searchEmployees(query) {
+        const searchTerm = query.toLowerCase();
+        return Array.from(this.employees.values()).filter(emp => 
+          emp.name.toLowerCase().includes(searchTerm) ||
+          (emp.location && emp.location.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      // Update statistics display
+      updateStats() {
+        const employees = Array.from(this.employees.values());
+        const presentCount = employees.filter(emp => emp.status === 'AVAILABLE' || emp.status === 'available').length;
+        const totalCount = employees.length;
+        const alertCount = employees.filter(emp => emp.status !== 'AVAILABLE' && emp.status !== 'available').length;
+        
+        // Update active count in header
+        if (this.activeCountElement) {
+          this.activeCountElement.textContent = presentCount;
+        }
+        
+        // Update summary stats
+        if (this.statsElements.present) {
+          this.statsElements.present.textContent = presentCount;
+        }
+        if (this.statsElements.alert) {
+          this.statsElements.alert.textContent = alertCount;
+        }
+        if (this.statsElements.total) {
+          this.statsElements.total.textContent = totalCount;
+        }
+        
+        Utils.log(`Stats updated: ${presentCount}/${totalCount} present, ${alertCount} alerts`);
+      }
+      
+      // Get all employees
+      getEmployees() {
+        return Array.from(this.employees.values());
+      }
+    }
+
+    // Create global instance
+    window.employeeManager = new EmployeeManager();
+
+    // Global functions for backend integration
+    window.loadEmployees = async function(employeeData) {
+      return await window.employeeManager.loadEmployees(employeeData);
+    };
+
+    window.addEmployee = function(employeeData) {
+      return window.employeeManager.addEmployee(employeeData);
+    };
+
+    window.updateEmployeeStatus = function(employeeId, status, lastSeen, location) {
+      return window.employeeManager.updateEmployeeStatus(employeeId, status, lastSeen, location);
+    };
+
+    window.removeEmployee = function(employeeId) {
+      return window.employeeManager.removeEmployee(employeeId);
+    };
+
+    window.getEmployee = function(employeeId) {
+      return window.employeeManager.getEmployee(employeeId);
+    };
+
+    window.getEmployees = function() {
+      return window.employeeManager.getEmployees();
+    };
+
+    window.trackEmployee = async function(employeeId) {
+      return await window.employeeManager.trackEmployee(employeeId);
+    };
+
+    // Face Recognition Controls for the Dashboard
+    class FaceRecognitionController {
+      constructor() {
+        this.isActive = false;
+        this.statusIndicator = null;
+        this.statusText = null;
+      }
+
+      // Initialize face recognition controller
+      init() {
+        this.statusIndicator = document.getElementById('ai-indicator');
+        this.statusText = document.getElementById('ai-status-text');
+
+        if (!this.statusIndicator || !this.statusText) {
+          Utils.log('Face recognition controller initialization failed: Required elements not found', 'error');
+          return false;
+        }
+
+        this.setupEventListeners();
+        Utils.log('Face recognition controller initialized successfully');
+        return true;
+      }
+
+      // Setup event listeners
+      setupEventListeners() {
+        // We can add manual control buttons here if needed
+      }
+
+      // Update AI inference status display
+      updateStatus(isActive) {
+        this.isActive = isActive;
+
+        if (this.statusIndicator && this.statusText) {
+          if (isActive) {
+            this.statusIndicator.classList.add('active');
+            this.statusText.textContent = 'AI Inference: Active';
+            this.statusText.style.color = '#00aa00';
+          } else {
+            this.statusIndicator.classList.remove('active');
+            this.statusText.textContent = 'AI Inference: Stopped';
+            this.statusText.style.color = '#554d4d';
+          }
+        }
+        
+        // Update the stream element if it exists
+        const cameraManager = window.cameraManager;
+        if (cameraManager && cameraManager.streamElement) {
+          if (isActive) {
+            cameraManager.startVideoStream();
+          } else {
+            cameraManager.stopVideoStream();
+          }
+        }
+      }
+
+      // Start face recognition
+      async start() {
+        try {
+          const response = await fetch('/api/ai/start', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const result = await response.json();
+          if (result.status === 'success') {
+            this.updateStatus(true);
+            Utils.log('Face recognition started successfully');
+            return true;
+          } else {
+            Utils.log(`Failed to start face recognition: ${result.message}`, 'error');
+            return false;
+          }
+        } catch (error) {
+          Utils.log(`Error starting face recognition: ${error.message}`, 'error');
+          return false;
+        }
+      }
+
+      // Stop face recognition
+      async stop() {
+        try {
+          const response = await fetch('/api/ai/stop', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          const result = await response.json();
+          if (result.status === 'success') {
+            this.updateStatus(false);
+            Utils.log('Face recognition stopped successfully');
+            return true;
+          } else {
+            Utils.log(`Failed to stop face recognition: ${result.message}`, 'error');
+            return false;
+          }
+        } catch (error) {
+          Utils.log(`Error stopping face recognition: ${error.message}`, 'error');
+          return false;
+        }
+      }
+
+      // Get current status
+      getStatus() {
+        return {
+          active: this.isActive
+        };
+      }
+    }
+
+    // Create global instance
+    window.faceRecognitionController = new FaceRecognitionController();
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      window.faceRecognitionController.init();
+    });
+
+    // Global functions for external access
+    window.updateAIInferenceStatus = function(isActive) {
+      if (window.faceRecognitionController) {
+        window.faceRecognitionController.updateStatus(isActive);
+      }
+    };
+
+    // Updated dashboard.js with AI inference indicator
+    // Main dashboard controller
+    class Dashboard {
+      constructor() {
+        this.isInitialized = false;
+        this.updateInterval = null;
+        this.aiInferenceActive = false;
+      }
+
+      // Initialize dashboard
+      async init() {
+        try {
+          Utils.log('Initializing dashboard...');
+
+          // Initialize managers
+          const cameraInitialized = window.cameraManager.init();
+          const employeeInitialized = window.employeeManager.init();
+
+          if (!cameraInitialized || !employeeInitialized) {
+            throw new Error('Failed to initialize managers');
+          }
+
+          // Setup event listeners
+          this.setupEventListeners();
+
+          // Start real-time updates
+          this.startRealTimeUpdates();
+
+          // Load initial data
+          await this.loadInitialData();
+
+          // Initialize WebSocket connection
+          this.initWebSocket();
+
+          this.isInitialized = true;
+          Utils.log('Dashboard initialized successfully');
+
+        } catch (error) {
+          Utils.log(`Dashboard initialization failed: ${error.message}`, 'error');
+          this.showErrorState();
+        }
+      }
+
+      // Setup event listeners
+      setupEventListeners() {
+        // Navigation
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.addEventListener('click', (e) => this.handleNavigation(e));
+        });
+
+        // User actions
+        const notificationsBtn = document.getElementById('notifications-btn');
+        const profileBtn = document.getElementById('profile-btn');
+
+        if (notificationsBtn) {
+          notificationsBtn.addEventListener('click', () => this.showNotifications());
+        }
+
+        if (profileBtn) {
+          profileBtn.addEventListener('click', () => this.showProfile());
+        }
+
+        // Window events
+        window.addEventListener('beforeunload', () => this.cleanup());
+        window.addEventListener('online', () => this.handleOnline());
+        window.addEventListener('offline', () => this.handleOffline());
+      }
+
+      // Initialize WebSocket connection
+      initWebSocket() {
+        try {
+          const socket = io();
+          
+          // Listen for AI status updates
+          socket.on('ai_status_update', (data) => {
+            this.updateAIInferenceStatus(data.active);
+          });
+          
+          // Listen for employee status updates
+          socket.on('employee_status_update', (data) => {
+            this.updateEmployeeStatuses(data);
+          });
+          
+          // Connection events
+          socket.on('connect', () => {
+            Utils.log('WebSocket connected');
+          });
+          
+          socket.on('disconnect', () => {
+            Utils.log('WebSocket disconnected');
+          });
+          
+          socket.on('connection_status', (data) => {
+            Utils.log(`WebSocket status: ${data.status}`);
+          });
+          
+          Utils.log('WebSocket initialized');
+        } catch (error) {
+          Utils.log(`WebSocket initialization failed: ${error.message}`, 'error');
+        }
+      }
+
+      // Handle navigation
+      handleNavigation(event) {
+        const section = event.currentTarget.dataset.section;
+        
+        // Update active nav item
+        document.querySelectorAll('.nav-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        event.currentTarget.classList.add('active');
+
+        // Handle section-specific logic
+        switch (section) {
+          case 'cctv':
+            this.showCCTVSection();
+            break;
+          case 'report':
+            this.showReportSection();
+            break;
+          default:
+            Utils.log(`Unknown section: ${section}`, 'warn');
+        }
+      }
+
+      // Show CCTV section
+      showCCTVSection() {
+        Utils.log('Showing CCTV section');
+      }
+
+      // Show report section
+      showReportSection() {
+        Utils.log('Showing report section');
+        alert('Report section - Coming soon!');
+      }
+
+      // Load initial data
+      async loadInitialData() {
+        try {
+          // Load cameras from API
+          await this.loadCamerasFromAPI();
+          // Load employees from API
+          await this.loadEmployeesFromAPI();
+          // Load employee status updates after employees are loaded
+          setTimeout(() => {
+            this.updateEmployeeStatusesFromAPI();
+          }, 1000);
+        } catch (error) {
+          Utils.log(`Failed to load initial data: ${error.message}`, 'error');
+        }
+      }
+
+      // Load cameras from API
+      async loadCamerasFromAPI() {
+        try {
+          const response = await fetch('/api/cameras');
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const cameras = await response.json();
+          await window.loadCameras(cameras);
+          
+          // Select first active camera by default
+          const activeCamera = cameras.find(cam => cam.isActive);
+          if (activeCamera) {
+            await window.selectCamera(activeCamera.id);
+          }
+          
+        } catch (error) {
+          Utils.log(`Failed to load cameras from API: ${error.message}`, 'error');
+        }
+      }
+
+      // Load employees from API
+      async loadEmployeesFromAPI() {
+        try {
+          // First try to get employee status which includes all employees
+          const statusResponse = await fetch('/api/employees/status');
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            if (statusData.success && statusData.data) {
+              await window.loadEmployees(statusData.data);
+              Utils.log(`Loaded ${statusData.data.length} employees from status API`);
+              return;
+            }
+          }
+          
+          // Fallback to regular employees endpoint
+          const response = await fetch('/api/employees');
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const employees = await response.json();
+          await window.loadEmployees(employees);
+          
+        } catch (error) {
+          Utils.log(`Failed to load employees from API: ${error.message}`, 'error');
+        }
+      }
+
+      // Start real-time updates
+      startRealTimeUpdates() {
+        // Update time every second
+        this.updateInterval = setInterval(() => {
+          this.updateDateTime();
+        }, 1000);
+
+        // Update employee status every 10 seconds
+        setInterval(() => {
+          this.updateEmployeeStatusesFromAPI();
+        }, 10000);
+      }
+
+      // Update employee statuses from API
+      async updateEmployeeStatusesFromAPI() {
+        try {
+          const response = await fetch('/api/employees/status');
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          
+          const statusUpdates = await response.json();
+          this.updateEmployeeStatuses(statusUpdates);
+          
+        } catch (error) {
+          Utils.log(`Failed to update employee statuses from API: ${error.message}`, 'error');
+        }
+      }
+
+      // Update employee statuses
+      updateEmployeeStatuses(statusUpdates) {
+        try {
+          // Handle different response formats from backend
+          let updates = [];
+          if (statusUpdates && statusUpdates.data && Array.isArray(statusUpdates.data)) {
+            updates = statusUpdates.data;
+          } else if (statusUpdates && statusUpdates.success && Array.isArray(statusUpdates.data)) {
+            updates = statusUpdates.data;
+          } else if (Array.isArray(statusUpdates)) {
+            updates = statusUpdates;
+          } else {
+            Utils.log('Invalid status updates format received', 'error');
+            return;
+          }
+          
+          updates.forEach(update => {
+            // Normalize fields from backend (supports snake_case and camelCase)
+            const employeeId = update.employeeId || update.employee_id;
+            const status = update.status;
+            const lastSeen = update.lastSeen || update.last_seen;
+            const cameraId = update.cameraId || update.camera_id;
+            const cameraName = update.cameraName || update.camera_name;
+
+            // Prefer explicit camera_name from backend, else resolve via camera_id, else fall back to provided location
+            const resolvedLocation = (
+              cameraName ||
+              (cameraId && window.employeeManager && typeof window.employeeManager.getCameraNameById === 'function'
+                ? window.employeeManager.getCameraNameById(cameraId)
+                : null) ||
+              update.location ||
+              cameraId ||
+              null
+            );
+
+            // Ensure employee exists before updating
+            if (!window.employeeManager.employees.has(employeeId)) {
+              // Create employee if not found
+              const newEmployee = {
+                id: employeeId,
+                name: update.employee_name || update.employeeName || `Employee ${employeeId}`,
+                status: status,
+                lastSeen: lastSeen,
+                cameraId: cameraId,
+                cameraName: cameraName
+              };
+              window.employeeManager.addEmployee(newEmployee);
+            } else {
+              window.updateEmployeeStatus(employeeId, status, lastSeen, resolvedLocation);
+            }
+          });
+        } catch (error) {
+          Utils.log(`Failed to update employee statuses: ${error.message}`, 'error');
+        }
+      }
+
+      // Update date and time display
+      updateDateTime() {
+        const timeElement = document.getElementById('current-time');
+        const dateElement = document.getElementById('current-date');
+
+        if (timeElement) {
+          timeElement.textContent = Utils.formatTime();
+        }
+
+        if (dateElement) {
+          dateElement.textContent = Utils.formatDate();
+        }
+      }
+
+      // Update AI inference status
+      updateAIInferenceStatus(isActive) {
+        this.aiInferenceActive = isActive;
+        
+        const indicator = document.getElementById('ai-indicator');
+        const statusText = document.getElementById('ai-status-text');
+        
+        if (indicator && statusText) {
+          if (isActive) {
+            indicator.classList.add('active');
+            statusText.textContent = 'AI Inference: Active';
+          } else {
+            indicator.classList.remove('active');
+            statusText.textContent = 'AI Inference: Stopped';
+          }
+        }
+      }
+
+      // Show notifications
+      showNotifications() {
+        Utils.log('Showing notifications');
+        alert('Notifications - Coming soon!');
+      }
+
+      // Show profile
+      showProfile() {
+        Utils.log('Showing profile');
+        alert('Profile - Coming soon!');
+      }
+
+      // Handle online status
+      handleOnline() {
+        Utils.log('Connection restored');
+        this.loadInitialData();
+      }
+
+      // Handle offline status
+      handleOffline() {
+        Utils.log('Connection lost', 'warn');
+        this.showOfflineState();
+      }
+
+      // Show error state
+      showErrorState() {
+        const mainContent = document.querySelector('.main-content');
+        if (mainContent) {
+          mainContent.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #ff0000;">
+              <h2>Dashboard Error</h2>
+              <p>Failed to initialize dashboard. Please refresh the page.</p>
+              <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #003473; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                Refresh Page
+              </button>
+            </div>
+          `;
+        }
+      }
+
+      // Show offline state
+      showOfflineState() {
+        const header = document.querySelector('.header');
+        if (header && !header.querySelector('.offline-indicator')) {
+          const offlineIndicator = document.createElement('div');
+          offlineIndicator.className = 'offline-indicator';
+          offlineIndicator.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff0000;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 1000;
+          `;
+          offlineIndicator.textContent = 'OFFLINE';
+          header.appendChild(offlineIndicator);
+        }
+      }
+
+      // Cleanup resources
+      cleanup() {
+        if (this.updateInterval) {
+          clearInterval(this.updateInterval);
+        }
+        
+        if (window.cameraManager) {
+          window.cameraManager.stopStream();
+        }
+        
+        Utils.log('Dashboard cleanup completed');
+      }
+
+      // Get dashboard status
+      getStatus() {
+        return {
+          initialized: this.isInitialized,
+          cameras: window.cameraManager?.getCameras() || [],
+          employees: window.employeeManager?.getEmployees() || [],
+          currentCamera: window.cameraManager?.getCurrentCamera() || null,
+          streaming: window.cameraManager?.isCurrentlyStreaming() || false,
+          aiInferenceActive: this.aiInferenceActive
+        };
+      }
+    }
+
+    // Initialize dashboard when DOM is loaded
+    document.addEventListener('DOMContentLoaded', async () => {
+      window.dashboard = new Dashboard();
+      await window.dashboard.init();
+      
+      // Request initial employee status
+      if (window.dashboard) {
+        window.dashboard.updateEmployeeStatusesFromAPI();
+      }
+    });
+
+    // Global functions for external access
+    window.getDashboardStatus = function() {
+      return window.dashboard?.getStatus() || { initialized: false };
+    };
+
+    window.refreshDashboard = async function() {
+      if (window.dashboard) {
+        await window.dashboard.loadInitialData();
+      }
+    };
+
+    window.updateAIInferenceStatus = function(isActive) {
+      if (window.dashboard) {
+        window.dashboard.updateAIInferenceStatus(isActive);
+      }
+    };
+  </script>
+</body>
+</html>

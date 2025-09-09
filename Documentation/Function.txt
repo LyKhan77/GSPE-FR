@@ -1,0 +1,45 @@
+Web Elemen and Function
+
+<...> artinya elemen atau class berdasarkan di HTML
+
+seluruh fungsi di web ini tidak ada rigged, semua fungsi berjalan secara real-time.
+
+<header>
+|---> <header-right>
+    |--> <current-time> & <current-date> : menampilkan waktu dan tanggal sekarang atau real-time
+    |--> <notification-btn> : menampilkan notifikasi dari employee yang keluar atau tidak terdeteksi lebih dari misal 30-60 detik dengan format [<nama employee> di luar jangkauan selama <duration> ]
+    |--> <settings-btn> : configurasi settings dengan fitur manage karyawan, parameter tuning dan configurasi lain. buatkan menu popup
+	    |---> <btn-manage-employee> : configurasi untuk manage database employee.
+		    |--> <btn-add-employee> : untuk register employee dengan input (Employee ID, Name, Departement, Role) dan capture wajah untuk embedding
+		    |--> <btn-edit-employee> : untuk edit data employee
+		    |--> <btn delete-employee> : untuk delete data employee
+	    |---> <btn-parameter-tuning> : configurasi untuk mengubah parameter model AI
+	    |---> <btn-spesifikasi> : menampilkan spesifikasi dari model.
+	    |---> <btn-other> : fitur ini untuk menampilkan elemen lainnya, mungkin seperti toggle nonaktifkan streaming cctv dan inferensi model AI. mungkin bisa juga menonaktifkan sistem tracking. dan refresh system.
+
+<Content Area>
+<Panel LIVE CCTV FEED> / <cctv-page>
+|--> <section-header> 
+    |--> <ai-status-indicator> : Indikator AI Inference akan menampilkan dot merah jika model AI offline dan dot hijau jika online.
+    |--> <ai-status-text> : menampilkan text dari status model AI, Online/Offline (terhubung dengan indicator).
+|--> <video-container> : Streaming CCTV Feed diisi dengan frame inferensi face recognition yang sudah dibuat AI Module nya. tinggal pasang (gunakan alamat ip camera_congfig)
+|--> <camera-controls>
+    |--> <camera-buttons> : <1> - <..> ini merupakan button untuk switch camera ke lokasi lain/IP camera lain yang terdaftar di folder \camera_congfig. jadi button akan ter-create dari sebuah folder.
+
+
+seluruh employee di database harus terhubung atau berelasi dengan semua function/komponen yang ada di panel ini.
+<Panel Employee Tracking> / <employee-tracking-section>
+    |---> <section-header>
+        |--> <active-count> : menghitung jumlah employee yang terdeteksi AI
+    |--> <employee-list> : berisi employee card yang terintegrasi dengan database.
+        |--> <employee-card>
+            |--> <-card-employee-name> : menampilkan nama employee dari tabel employee pada database.
+            |--> <card-camera> : menampilkan nama camera di mana employee terdeteksi oleh streaming model AI.
+            |--> <status-indicator> : status employee apakah masuk ke dalam streaming camera atau tidak. jika terdeteksi maka status menampilkan dot warna hijau. jika tidak maka dengan status dot warna merah.
+	    |--> <status-text> : menampilkan text dari status employee apakah masuk ek dalam streaming camera atau tidak. jika terdeteksi maka text "Available", jika tidak maka "Off Cam".
+            |--> <status-time> : menampilkan durasi waktu terakhir employee terdeteksi atau terlihat di CCTV AI. jika sekarang sedang terlihat maka tampilkan "just now". elemen ini bisa krusial karena harus memberi notifikasi ke <button_notification> jika employee tidak terlihat selama misal > 2 menit.
+            |--> <track-btn> : jika diclick maka akan menavigasi ke alamat CCTV dimana employee itu berada atau terdeteksi.
+    |--> <summary-stats> : menampilkan summary dari keseluruhan employee dari <employee-item>
+            |--> <present-count> : jumlah employee yang terdeteksi di CCTV
+            |--> <alert-count> : jumlah employee yang tidak terdeteksi di CCTV
+            |--> <total-count> : jumlah total employee

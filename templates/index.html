@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Meta tags untuk karakter set, viewport, dan title -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSPE Auto-Monitoring System</title>
+    
+    <!-- CDN untuk Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Konfigurasi kustom untuk Tailwind CSS -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e3a8a',
+                        'primary-light': '#3b82f6',
+                        success: '#28a745',
+                        danger: '#dc3545',
+                        warning: '#ffc107',
+                        info: '#17a2b8',
+                        light: '#f8f9fa',
+                        dark: '#343a40',
+                        border: '#e0e0e0',
+                        'text-muted': '#666'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- CSS kustom -->
+    <style>
+        /* Import font Inter dari Google Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        /* Pengaturan font utama */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Styling untuk stream kamera */
+        .camera-stream {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Styling untuk dot status karyawan - hadir */
+        .status-dot.available {
+            background: #28a745;
+        }
+        
+        /* Styling untuk dot status karyawan - tidak hadir */
+        .status-dot.off {
+            background: #dc3545;
+        }
+        
+        /* Styling untuk indikator status AI - aktif */
+        .ai-status .status-indicator.active {
+            background: #28a745;
+        }
+        
+        /* Styling untuk badge notifikasi */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        /* Styling untuk toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+        
+        .toast.toast-info {
+            background-color: #17a2b8;
+        }
+        
+        .toast.toast-success {
+            background-color: #28a745;
+        }
+        
+        .toast.toast-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .toast.toast-error {
+            background-color: #dc3545;
+        }
+        
+        /* Animasi untuk modal */
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-content {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        
+        /* Animasi spinner loading */
+        .spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #1e3a8a;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+    <!-- Header -->
+    <!-- Bagian header berisi logo, judul dashboard, dan tombol notifikasi -->
+    <header class="bg-white py-4 px-8 flex justify-between items-center shadow-md border-b border-gray-200">
+        <!-- Logo dan nama sistem -->
+        <div class="flex items-center">
+            <div class="flex items-center gap-3">
+                <img src="/assets/logo" alt="GSPE" class="h-10 w-auto object-contain select-none" draggable="false" />
+                <div class="flex flex-col leading-tight"></div>
+            </div>
+        </div>
+        
+        <!-- Judul dashboard -->
+        <div class="flex-1 text-center">
+            <h1 class="text-2xl font-semibold text-primary">Welcome to Dashboard</h1>
+            <span class="text-l font-medium text-gray-500">Auto-Monitoring System</span>
+        </div>
+        
+        <!-- Elemen waktu dan tombol notifikasi -->
+        <div class="flex items-center gap-4 relative">
+            <!-- Menampilkan waktu dan tanggal saat ini -->
+            <div class="text-right">
+                <div class="text-lg font-semibold text-gray-800" id="current-time">15:23:00</div>
+                <div class="text-sm text-gray-500" id="current-date">20 August 2025</div>
+            </div>
+            <!-- Tombol notifikasi - menampilkan jumlah notifikasi baru -->
+            <button class="bg-gray-100 border border-gray-200 rounded-lg p-2 hover:bg-gray-200 transition relative" id="notification-btn" aria-haspopup="true" aria-expanded="false">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span id="notification-badge" class="hidden absolute -top-1 -right-1 text-xs font-semibold bg-red-500 text-white rounded-full px-1.5 py-0.5 leading-none">0</span>
+            </button>
+            <!-- Notification Dropdown -->
+            <div id="notification-dropdown" class="hidden absolute right-0 top-12 w-80 bg-white shadow-lg border border-gray-200 rounded-lg overflow-hidden z-30">
+                <div class="px-3 py-2 border-b border-gray-100 flex items-center justify-between">
+                    <div class="font-semibold text-gray-700">Notifications</div>
+                    <button id="btn-clear-notifs" class="text-xs px-2 py-0.5 border border-gray-200 rounded hover:bg-gray-50" title="Clear all notifications">Clear All</button>
+                </div>
+                <div id="notification-list" class="max-h-64 overflow-y-auto">
+                    <div class="px-4 py-3 text-sm text-gray-500">No notifications</div>
+                </div>
+            </div>
+            <!-- Tombol pengaturan - untuk configurasi mengenai sistem -->
+            <button class="bg-gray-100 border border-gray-200 rounded-lg p-2 hover:bg-gray-200 transition" id="settings-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex flex-1 min-h-[calc(100vh-140px)]">
+        <!-- Sidebar -->
+        <!-- Menu navigasi samping untuk berpindah antar halaman -->
+        <aside class="w-48 bg-primary">
+            <nav class="flex flex-col">
+                <!-- Tombol menu CCTV - halaman aktif -->
+                <a href="#" class="flex items-center gap-3 px-6 py-4 text-gray-300 hover:bg-blue-800 hover:text-white transition border-b border-blue-900 active" data-page="cctv">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-video-icon lucide-video"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+                    <span>CCTV</span>
+                </a>
+                <!-- Tombol menu Report -->
+                <a href="#" class="flex items-center gap-3 px-6 py-4 text-gray-300 hover:bg-blue-800 hover:text-white transition border-b border-blue-900" data-page="report">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14,2 14,8 20,8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10,9 9,9 8,9"></polyline>
+                    </svg>
+                    <span>Report</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="flex-1 p-8">
+            <!-- CCTV Page -->
+            <!-- Halaman utama yang menampilkan feed CCTV dan tracking karyawan -->
+            <div id="cctv-page" class="page block">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 h-full">
+                    <!-- Live CCTV Feed -->
+                    <!-- Panel kiri menampilkan live feed dari kamera CCTV -->
+                    <section class="lg:col-span-2 bg-white rounded-xl p-6 shadow">
+                        <!-- Header panel CCTV dengan status AI -->
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-semibold text-primary">Live CCTV Feed</h2>
+                            <!-- Status indikator AI inference -->
+                            <div class="flex items-center gap-2">
+                                <div class="w-2.5 h-2.5 rounded-full bg-red-500" id="ai-status-indicator"></div>
+                                <span id="ai-status-text">AI Inference: Offline</span>
+                            </div>
+                        </div>
+                        <!-- Area tampilan video CCTV -->
+                        <div id="video-container" class="bg-gray-100 border-2 border-gray-200 rounded-lg h-96 flex items-center justify-center mb-6 relative overflow-hidden">
+                            <img id="video-stream" class="camera-stream hidden" alt="Live Stream" />
+                            <div class="text-xl text-gray-500 font-medium" id="video-placeholder">
+                                <span>&lt;LIVE CCTV CAM&gt;</span>
+                            </div>
+                        </div>
+                        
+                        <!-- CCTV Camera Controls -->
+                        <!-- Kontrol untuk memilih kamera CCTV yang berbeda -->
+                        <div>
+                            <h3 id="camera-title" class="text-lg font-medium text-primary mb-4">CCTV CAM</h3>
+                            <div class="flex gap-3" id="camera-buttons">
+                                <!-- Tombol kamera akan diisi oleh JavaScript -->
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Employee Tracking -->
+                    <!-- Panel kanan menampilkan tracking karyawan -->
+                    <section id="employee-tracking" class="bg-white rounded-xl p-6 shadow flex flex-col">
+                        <!-- Header panel tracking dengan jumlah karyawan aktif -->
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-semibold text-primary">Employee Tracking</h2>
+                            <div class="bg-gray-100 px-3 py-1 rounded-full text-sm text-gray-500 border border-gray-200" id="active-count">0 Active</div>
+                        </div>
+                        <!-- Daftar karyawan yang terdeteksi -->
+                        <div class="flex-1 mb-6 overflow-y-auto" id="employee-list">
+                            <!-- Item karyawan akan diisi oleh JavaScript -->
+                        </div>
+                        
+                        <!-- Summary Stats -->
+                        <!-- Statistik ringkasan kehadiran karyawan -->
+                        <div class="flex justify-around pt-6 border-t border-gray-200" id="summary-stats">
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-gray-500" id="present-count">0</div>
+                                <div class="text-sm text-gray-500 mt-1">Present</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-danger" id="alert-count">0</div>
+                                <div class="text-sm text-gray-500 mt-1">Alerts</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-3xl font-bold text-gray-500" id="total-count">0</div>
+                                <div class="text-sm text-gray-500 mt-1">Total</div>
+                            </div>
+                        </div>
+                    </section>
+
+                    
+                </div>
+            </div>
+
+            <!-- Report Page -->
+            <!-- Halaman laporan kehadiran karyawan -->
+            <div id="report-page" class="page hidden">
+                <div class="bg-white rounded-xl p-8 shadow">
+                    <h2 class="text-2xl font-semibold text-primary mb-6">Attendance Report</h2>
+                    <div class="report-content">
+                        <!-- Filters -->
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4 items-end">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">From</label>
+                                <input id="rep-from" type="date" class="w-full border rounded px-2 py-1" />
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">To</label>
+                                <input id="rep-to" type="date" class="w-full border rounded px-2 py-1" />
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs text-gray-600 mb-1">Employee</label>
+                                <select id="rep-emp" class="w-full border rounded px-2 py-1">
+                                    <option value="">All Employees</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2 md:justify-end">
+                                <button id="btn-load-att" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Load Attendance</button>
+                                <a id="btn-export-att" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded" href="#">Export CSV</a>
+                            </div>
+                        </div>
+
+                        <!-- Attendance Table -->
+                        <div class="overflow-x-auto mb-8">
+                            <table class="min-w-full text-sm border border-gray-200 rounded">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="employee_code">Employee Code</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="employee_name">Name</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="date">Date</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="first_in_ts">First In</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="last_out_ts">Last Out</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="status">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="att-table" class="divide-y"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Alerts Header + Export -->
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-semibold text-primary">Alert Logs</h3>
+                            <div class="flex gap-2">
+                                <button id="btn-load-alerts" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Load Alerts</button>
+                                <a id="btn-export-alerts" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded" href="#">Export CSV</a>
+                            </div>
+                        </div>
+                        <!-- Alert Logs Table -->
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm border border-gray-200 rounded">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="timestamp">Timestamp</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="employee_code">Employee Code</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="employee_name">Name</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="alert_type">Type</th>
+                                        <th class="px-3 py-2 text-left cursor-pointer select-none" data-sort-key="message">Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alerts-table" class="divide-y"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Reset Logs Toolbar (Events & Alert Logs) -->
+                        <div class="flex items-center gap-3 mt-6">
+                            <button id="btn-reset-logs" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded">Reset Logs</button>
+                            <span class="text-xs text-gray-500">Hapus data pada tabel Events dan/atau Alert Logs berdasarkan rentang tanggal.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="settings-page" class="page hidden">
+                <div class="bg-white rounded-xl p-6 shadow">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-semibold text-primary">Settings</h2>
+                    </div>
+
+                    <!-- Tabs -->
+                    <div class="border-b border-gray-200 mb-4">
+                        <nav class="flex gap-4" aria-label="Tabs">
+                            <button id="tab-manage-employee" class="px-4 py-2 text-gray-500 hover:text-gray-700">Manage Employee</button>
+                            <button id="tab-manage-camera" class="px-4 py-2 text-gray-500 hover:text-gray-700">Manage Camera</button>
+                            <button id="tab-manage-system" class="px-4 py-2 text-gray-500 hover:text-gray-700">Manage System</button>
+                            <button id="tab-schedule-system" class="px-4 py-2 text-gray-500 hover:text-gray-700">Schedule System</button>
+                        </nav>
+                    </div>
+
+                    <!-- Manage Employee Content -->
+                    <section id="manage-employee" class="block">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-semibold text-primary">Employees</h3>
+                            <div class="flex items-center gap-2">
+                                <button id="btn-add-emp" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Add Employee</button>
+                                <button id="btn-refresh-emp" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded">Refresh</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm border border-gray-200 rounded">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left">ID</th>
+                                        <th class="px-3 py-2 text-left">Code</th>
+                                        <th class="px-3 py-2 text-left">Name</th>
+                                        <th class="px-3 py-2 text-left">Dept</th>
+                                        <th class="px-3 py-2 text-left">Position</th>
+                                        <th class="px-3 py-2 text-left">Phone</th>
+                                        <th class="px-3 py-2 text-left">Active</th>
+                                        <th class="px-3 py-2 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employee-table" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- Manage Camera Content -->
+                    <section id="manage-camera" class="hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-semibold text-primary">Cameras</h3>
+                            <button id="btn-refresh-cam" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Refresh</button>
+                        </div>
+
+                        <!-- Add Camera Form -->
+                        <div class="mb-4 p-3 border rounded bg-gray-50">
+                            <div class="text-sm font-medium mb-2">Add Camera</div>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Name</label>
+                                    <input id="cam-add-name" type="text" class="w-full border rounded px-2 py-1" placeholder="e.g. Lobby" />
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs text-gray-600 mb-1">RTSP / Source</label>
+                                    <input id="cam-add-url" type="text" class="w-full border rounded px-2 py-1" placeholder="rtsp://... or webcam:0 or 0" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">ID (optional)</label>
+                                    <input id="cam-add-id" type="number" min="1" class="w-full border rounded px-2 py-1" placeholder="auto" />
+                                </div>
+                                <div class="md:col-span-4 flex gap-2 mt-2">
+                                    <button id="btn-add-camera" class="px-3 py-1.5 text-sm bg-green-600 text-white rounded">Add Camera</button>
+                                    <div id="cam-add-msg" class="text-sm"></div>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-2">Note: Camera must be enabled via Manage Camera toggle to appear online in CCTV streaming.</div>
+                        </div>
+
+                        <div id="camera-status-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                    </section>
+                    
+                    <!-- Manage System Content -->
+                    <section id="manage-system" class="hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-semibold text-primary">System</h3>
+                        </div>
+                        <div class="p-3 border rounded bg-gray-50 space-y-3">
+                            <div>
+                                <p class="text-sm text-gray-600 mb-2">Restart the application without using the terminal.</p>
+                                <button id="btn-reset-system" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded">Restart System</button>
+                                <span id="sys-reset-msg" class="text-sm ml-2"></span>
+                            </div>
+                            <div class="pt-3 border-t border-gray-200">
+                                <p class="text-sm text-gray-600 mb-2">Shutdown the application and all background workers.</p>
+                                <button id="btn-shutdown-system" class="px-3 py-1.5 text-sm bg-gray-800 text-white rounded">Shutdown System</button>
+                                <span id="sys-shutdown-msg" class="text-sm ml-2"></span>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Schedule System Content (under Settings tab) -->
+                    <section id="schedule-system" class="hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-lg font-semibold text-primary">Schedule System</h3>
+                        </div>
+                        <div id="schedule-banner" class="mb-3 p-3 rounded border text-sm"></div>
+                        <div class="p-3 border rounded bg-gray-50 space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <label class="flex items-center gap-2 text-sm">
+                                    <input id="sch-auto" type="checkbox" class="h-4 w-4" />
+                                    Follow Auto Schedule
+                                </label>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Work Hours (HH:MM-HH:MM)</label>
+                                    <input id="sch-work" type="text" class="w-full border rounded px-2 py-1" placeholder="08:30-17:30" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Lunch Break (HH:MM-HH:MM)</label>
+                                    <input id="sch-lunch" type="text" class="w-full border rounded px-2 py-1" placeholder="12:00-13:00" />
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="btn-sch-save" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Save Schedule</button>
+                                <button id="btn-sch-resume" class="px-3 py-1.5 text-sm bg-green-600 text-white rounded">Resume Now</button>
+                                <button id="btn-sch-pause-lunch" class="px-3 py-1.5 text-sm bg-yellow-600 text-white rounded">Pause for Lunch</button>
+                                <button id="btn-sch-pause-offhours" class="px-3 py-1.5 text-sm bg-gray-700 text-white rounded">Pause Until Next Work</button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">Pause (minutes)</label>
+                                    <input id="sch-pause-min" type="number" min="1" class="w-full border rounded px-2 py-1" placeholder="60" />
+                                </div>
+                                <div class="md:col-span-2 flex gap-2">
+                                    <button id="btn-sch-pause-min" class="px-3 py-1.5 text-sm bg-gray-500 text-white rounded">Pause by Minutes</button>
+                                </div>
+                            </div>
+                            <div id="sch-msg" class="text-sm"></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <!-- Footer dengan informasi hak cipta -->
+    <footer class="bg-white py-4 text-center border-t border-gray-200 text-gray-500 text-sm">
+        <p>Copyright @ PT GSPE</p>
+    </footer>
+
+    <!-- Notification Modal (not used by dropdown; kept for future use) -->
+    <!-- Modal popup untuk menampilkan notifikasi -->
+    <div id="notification-modal" class="hidden fixed inset-0 z-1000 bg-black bg-opacity-50">
+        <div class="bg-white mx-auto mt-20 rounded-xl w-11/12 max-w-2xl shadow-2xl modal-content">
+            <div class="flex justify-between items-center p-6 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                <h3 class="text-xl font-semibold text-primary">Notifications</h3>
+                <!-- Tombol tutup modal notifikasi -->
+                <button class="text-2xl text-gray-500 hover:text-gray-700 transition" id="close-notification-modal">&times;</button>
+            </div>
+            <div class="p-6 max-h-96 overflow-y-auto" id="notification-modal-list">
+                <!-- Daftar notifikasi akan diisi oleh JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div id="edit-employee-modal" class="hidden fixed inset-0 z-1000 bg-black bg-opacity-50 overflow-y-auto">
+        <div class="bg-white mx-auto mt-24 rounded-xl w-11/12 max-w-lg shadow-2xl modal-content p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-primary">Edit Employee</h3>
+                <button id="close-edit-employee" class="text-2xl text-gray-500">&times;</button>
+            </div>
+            <form id="edit-employee-form" class="space-y-3">
+                <input type="hidden" id="edit-id" />
+                <div>
+                    <label class="block text-sm">Employee Code</label>
+                    <input id="edit-code" class="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+                <div>
+                    <label class="block text-sm">Name</label>
+                    <input id="edit-name" class="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm">Department</label>
+                        <input id="edit-dept" class="w-full border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm">Position</label>
+                        <input id="edit-pos" class="w-full border rounded px-3 py-2 text-sm" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm">Phone</label>
+                    <input id="edit-phone" class="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="edit-active" />
+                    <label for="edit-active" class="text-sm">Active</label>
+                </div>
+                <!-- Face Templates Preview (read-only) -->
+                <div class="pt-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-medium">Face Templates</label>
+                        <span class="text-xs text-gray-500">read-only</span>
+                    </div>
+                    <div id="edit-face-templates" class="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
+                        <div class="text-sm text-gray-500">No templates</div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="save-edit-employee" class="px-4 py-2 bg-primary text-white rounded">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="add-employee-modal" class="hidden fixed inset-0 z-1000 bg-black bg-opacity-50 overflow-y-auto">
+        <div class="bg-white mx-auto mt-24 rounded-xl w-11/12 max-w-lg shadow-2xl modal-content p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold text-primary">Add Employee</h3>
+                <button id="close-add-employee" class="text-2xl text-gray-500">&times;</button>
+            </div>
+            <form id="add-employee-form" class="space-y-3">
+                <div>
+                    <label class="block text-sm">Employee Code</label>
+                    <input id="add-code" class="w-full border rounded px-3 py-2 text-sm" required />
+                </div>
+                <div>
+                    <label class="block text-sm">Name</label>
+                    <input id="add-name" class="w-full border rounded px-3 py-2 text-sm" required />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm">Department</label>
+                        <input id="add-dept" class="w-full border rounded px-3 py-2 text-sm" />
+                    </div>
+                    <div>
+                        <label class="block text-sm">Position</label>
+                        <input id="add-pos" class="w-full border rounded px-3 py-2 text-sm" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm">Phone</label>
+                    <input id="add-phone" class="w-full border rounded px-3 py-2 text-sm" />
+                </div>
+
+                <!-- Face Capture -->
+                <div class="pt-2">
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-sm font-medium">Face Capture (optional but recommended)</label>
+                        <span id="add-face-status" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded p-3">
+                        <div class="relative aspect-video bg-black rounded overflow-hidden mb-2">
+                            <video id="add-video" class="w-full h-full object-cover" autoplay muted playsinline></video>
+                            <canvas id="add-canvas" class="hidden"></canvas>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="btn-add-startcam" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded">Start Camera</button>
+                            <button type="button" id="btn-add-capture" class="px-3 py-1.5 text-sm bg-primary text-white rounded">Capture</button>
+                            <button type="button" id="btn-add-retake" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded hidden">Retake</button>
+                            <img id="add-snapshot" class="h-10 w-10 rounded hidden border border-gray-200" alt="snapshot" />
+                        </div>
+                        <!-- Pose selector and thumbnails -->
+                        <div class="mt-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-xs text-gray-600">Pose:</span>
+                                <button type="button" class="pose-btn px-2 py-0.5 text-xs rounded border" data-pose="front">Front</button>
+                                <button type="button" class="pose-btn px-2 py-0.5 text-xs rounded border" data-pose="left">Left</button>
+                                <button type="button" class="pose-btn px-2 py-0.5 text-xs rounded border" data-pose="right">Right</button>
+                                <span id="pose-active" class="ml-2 text-xs text-primary"></span>
+                            </div>
+                            <div id="pose-thumbs" class="grid grid-cols-3 gap-2">
+                                <div class="border rounded p-1 text-center">
+                                    <div class="text-[10px] text-gray-500">Front</div>
+                                    <img id="thumb-front" class="w-full h-16 object-cover rounded hidden" />
+                                    <div id="q-front" class="text-[10px] text-gray-500 mt-1"></div>
+                                </div>
+                                <div class="border rounded p-1 text-center">
+                                    <div class="text-[10px] text-gray-500">Left</div>
+                                    <img id="thumb-left" class="w-full h-16 object-cover rounded hidden" />
+                                    <div id="q-left" class="text-[10px] text-gray-500 mt-1"></div>
+                                </div>
+                                <div class="border rounded p-1 text-center">
+                                    <div class="text-[10px] text-gray-500">Right</div>
+                                    <img id="thumb-right" class="w-full h-16 object-cover rounded hidden" />
+                                    <div id="q-right" class="text-[10px] text-gray-500 mt-1"></div>
+                                </div>
+                            </div>
+                            <div class="text-[10px] text-gray-500 mt-1">Tip: capture all three poses for better recognition.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" id="add-active" checked />
+                    <label for="add-active" class="text-sm">Active</label>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" id="save-add-employee" class="px-4 py-2 bg-primary text-white rounded">Register</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Load Socket.IO client from CDN -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Frontend logic: fetch cameras, render buttons, and stream frames via Socket.IO
+        (function() {
+            const cameraButtonsEl = document.getElementById('camera-buttons');
+            const videoImg = document.getElementById('video-stream');
+            const placeholder = document.getElementById('video-placeholder');
+            const aiDot = document.getElementById('ai-status-indicator');
+            const aiText = document.getElementById('ai-status-text');
+
+            const socket = io();
+            let currentCamId = null;
+            let lastFrameAt = 0;
+            let frameWatch = null;
+
+            function setAIStatus(active) {
+                if (active) {
+                    aiDot.classList.remove('bg-red-500');
+                    aiDot.classList.add('bg-green-500');
+                    aiText.textContent = 'AI Inference: Online';
+                } else {
+                    aiDot.classList.remove('bg-green-500');
+                    aiDot.classList.add('bg-red-500');
+                    aiText.textContent = 'AI Inference: Offline';
+                }
+            }
+
+            function showFrame(dataUrl) {
+                videoImg.src = dataUrl;
+                if (videoImg.classList.contains('hidden')) {
+                    videoImg.classList.remove('hidden');
+                }
+                if (!placeholder.classList.contains('hidden')) {
+                    placeholder.classList.add('hidden');
+                }
+            }
+
+            function showPlaceholder(msg) {
+                if (!videoImg.classList.contains('hidden')) {
+                    videoImg.classList.add('hidden');
+                }
+                placeholder.classList.remove('hidden');
+                if (msg) placeholder.innerHTML = `<span>${msg}</span>`;
+            }
+
+            async function loadCameras() {
+                try {
+                    const res = await fetch('/api/cameras');
+                    const cams = await res.json();
+                    cameraButtonsEl.innerHTML = '';
+                    if (!Array.isArray(cams) || cams.length === 0) {
+                        cameraButtonsEl.innerHTML = '<div class="text-sm text-gray-500">No cameras found</div>';
+                        return;
+                    }
+                    cams.forEach(cam => {
+                        const btn = document.createElement('button');
+                        btn.className = 'px-4 py-2 bg-primary text-white rounded hover:bg-blue-700 transition text-sm';
+                        const label = cam.id != null ? `CAM ${cam.id}` : (cam.name || 'CAM');
+                        btn.textContent = label;
+                        btn.title = cam.name || '';
+                        btn.addEventListener('click', () => startStream(cam.id));
+                        cameraButtonsEl.appendChild(btn);
+                    });
+                } catch (e) {
+                    cameraButtonsEl.innerHTML = '<div class="text-sm text-danger">Failed to load cameras</div>';
+                    console.error(e);
+                }
+            }
+
+            function startStream(camId) {
+                if (currentCamId !== null) {
+                    socket.emit('stop_stream', { cam_id: currentCamId });
+                }
+                currentCamId = camId;
+                showPlaceholder('&lt;CONNECTING...&gt;');
+                // Consider offline until a frame actually arrives
+                setAIStatus(false);
+                lastFrameAt = 0;
+                if (frameWatch) clearInterval(frameWatch);
+                frameWatch = setInterval(() => {
+                    if (!currentCamId) return;
+                    if (lastFrameAt === 0) return; // not yet received any frame
+                    const gap = Date.now() - lastFrameAt;
+                    if (gap > 3000) {
+                        setAIStatus(false);
+                    }
+                }, 1000);
+                socket.emit('start_stream', { cam_id: camId });
+            }
+
+            socket.on('frame', payload => {
+                if (!payload || !payload.image) return;
+                lastFrameAt = Date.now();
+                setAIStatus(true);
+                showFrame(`data:image/jpeg;base64,${payload.image}`);
+            });
+
+            socket.on('stream_error', payload => {
+                setAIStatus(false);
+                const msg = payload && payload.message ? payload.message : 'Stream error';
+                showPlaceholder(`&lt;${msg}&gt;`);
+            });
+
+            socket.on('stream_stopped', () => {
+                setAIStatus(false);
+                showPlaceholder('&lt;LIVE CCTV CAM&gt;');
+                if (frameWatch) { clearInterval(frameWatch); frameWatch = null; }
+                lastFrameAt = 0;
+            });
+
+            window.addEventListener('beforeunload', () => {
+                if (currentCamId !== null) {
+                    socket.emit('stop_stream', { cam_id: currentCamId });
+                }
+            });
+
+            loadCameras();
+
+            // --- Real-time time/date updater ---
+            const timeEl = document.getElementById('current-time');
+            const dateEl = document.getElementById('current-date');
+            function pad(n){ return n.toString().padStart(2,'0'); }
+            function updateClock(){
+                const now = new Date();
+                const hh = pad(now.getHours());
+                const mm = pad(now.getMinutes());
+                const ss = pad(now.getSeconds());
+                if (timeEl) timeEl.textContent = `${hh}:${mm}:${ss}`;
+                if (dateEl) dateEl.textContent = now.toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' });
+            }
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // --- Page navigation ---
+            function showPage(id){
+                document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('hidden');
+            }
+
+            // Sidebar links
+            document.querySelectorAll('aside [data-page]').forEach(a=>{
+                a.addEventListener('click', (e)=>{
+                    e.preventDefault();
+                    const page = a.getAttribute('data-page');
+                    if (page === 'cctv') showPage('cctv-page');
+                    else if (page === 'report') showPage('report-page');
+                });
+            });
+
+            // Settings button opens settings page
+            const settingsBtn = document.getElementById('settings-btn');
+            if (settingsBtn){
+                settingsBtn.addEventListener('click', ()=>{
+                    showPage('settings-page');
+                    // default tab
+                    setActiveTab('employee');
+                    loadEmployees();
+                });
+            }
+
+            // Manage System: Shutdown System button
+            const btnShutdownSystem = document.getElementById('btn-shutdown-system');
+            const sysShutdownMsg = document.getElementById('sys-shutdown-msg');
+            if (btnShutdownSystem){
+                btnShutdownSystem.addEventListener('click', async ()=>{
+                    const ok = confirm('This will stop the server and all workers. Continue?');
+                    if (!ok) return;
+                    btnShutdownSystem.disabled = true;
+                    if (sysShutdownMsg){ sysShutdownMsg.textContent = 'Shutting down...'; sysShutdownMsg.className = 'text-sm ml-2 text-gray-600'; }
+                    try{
+                        const res = await fetch('/api/system/shutdown', { method:'POST' });
+                        if (res.ok){
+                            if (sysShutdownMsg){ sysShutdownMsg.textContent = 'Server is shutting down.'; sysShutdownMsg.className = 'text-sm ml-2 text-green-600'; }
+                        } else {
+                            const data = await res.json().catch(()=>({}));
+                            if (sysShutdownMsg){ sysShutdownMsg.textContent = data.error || 'Failed to shutdown'; sysShutdownMsg.className = 'text-sm ml-2 text-red-600'; }
+                            btnShutdownSystem.disabled = false;
+                        }
+                    }catch(err){
+                        if (sysShutdownMsg){ sysShutdownMsg.textContent = 'Request failed'; sysShutdownMsg.className = 'text-sm ml-2 text-red-600'; }
+                        btnShutdownSystem.disabled = false;
+                    }
+                });
+            }
+
+            // --- Tabs handling in settings ---
+            const tabEmp = document.getElementById('tab-manage-employee');
+            const tabCam = document.getElementById('tab-manage-camera');
+            const tabSys = document.getElementById('tab-manage-system');
+            const tabSch = document.getElementById('tab-schedule-system');
+            const secEmp = document.getElementById('manage-employee');
+            const secCam = document.getElementById('manage-camera');
+            const secSys = document.getElementById('manage-system');
+            const secSch = document.getElementById('schedule-system');
+
+            // --- Schedule System JS (moved into main IIFE) ---
+            const schBanner = document.getElementById('schedule-banner');
+            const schAuto = document.getElementById('sch-auto');
+            const schWork = document.getElementById('sch-work');
+            const schLunch = document.getElementById('sch-lunch');
+            const schMsg = document.getElementById('sch-msg');
+            const btnSchSave = document.getElementById('btn-sch-save');
+            const btnSchResume = document.getElementById('btn-sch-resume');
+            const btnSchPauseLunch = document.getElementById('btn-sch-pause-lunch');
+            const btnSchPauseOff = document.getElementById('btn-sch-pause-offhours');
+            const schPauseMin = document.getElementById('sch-pause-min');
+            const btnSchPauseMin = document.getElementById('btn-sch-pause-min');
+            const trackingState = { tracking_active:false, suppress_alerts:false, auto_schedule:true };
+
+            async function loadTrackingState(){
+                try{
+                    const res = await fetch('/api/schedule/state');
+                    if (!res.ok) return;
+                    const st = await res.json();
+                    trackingState.tracking_active = !!st.tracking_active;
+                    trackingState.suppress_alerts = !!st.suppress_alerts;
+                    trackingState.auto_schedule = !!st.auto_schedule;
+                    if (schAuto) schAuto.checked = trackingState.auto_schedule;
+                    if (schWork) schWork.value = st.work_hours || '08:30-17:30';
+                    if (schLunch) schLunch.value = st.lunch_break || '12:00-13:00';
+                    renderScheduleBanner(st);
+                }catch(e){}
+            }
+
+            function renderScheduleBanner(st){
+                if (!schBanner) return;
+                const active = !!st.tracking_active;
+                const suppress = !!st.suppress_alerts;
+                const auto = !!st.auto_schedule;
+                let text = active ? 'Tracking: ACTIVE' : 'Tracking: INACTIVE';
+                if (suppress) text += ' • Alerts: SUPPRESSED';
+                text += auto ? ' • Mode: AUTO' : ' • Mode: MANUAL';
+                schBanner.textContent = text;
+                schBanner.className = 'mb-3 p-3 rounded border text-sm ' + (active ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-700');
+            }
+
+            async function saveSchedule(){
+                if (!schAuto || !schWork || !schLunch) return;
+                schMsg && (schMsg.textContent = '');
+                try{
+                    const payload = { auto_schedule: schAuto.checked, work_hours: schWork.value.trim(), lunch_break: schLunch.value.trim(), clear_pause: true };
+                    const res = await fetch('/api/schedule/mode', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                    const data = await res.json().catch(()=>({}));
+                    if (res.ok){ schMsg && (schMsg.textContent = 'Saved'); schMsg && (schMsg.className='text-sm text-green-600'); renderScheduleBanner(data.state || {}); }
+                    else { schMsg && (schMsg.textContent = (data.error || 'Failed')); schMsg && (schMsg.className='text-sm text-red-600'); }
+                }catch(e){ schMsg && (schMsg.textContent = 'Request failed'); schMsg && (schMsg.className='text-sm text-red-600'); }
+            }
+            async function resumeNow(){
+                if (!schAuto) return;
+                schMsg && (schMsg.textContent = '');
+                try{
+                    const payload = { auto_schedule: schAuto.checked, clear_pause: true };
+                    const res = await fetch('/api/schedule/mode', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+                    const data = await res.json().catch(()=>({}));
+                    if (res.ok){ schMsg && (schMsg.textContent = 'Resumed'); schMsg && (schMsg.className='text-sm text-green-600'); renderScheduleBanner(data.state || {}); }
+                    else { schMsg && (schMsg.textContent = (data.error || 'Failed')); schMsg && (schMsg.className='text-sm text-red-600'); }
+                }catch(e){ schMsg && (schMsg.textContent = 'Request failed'); schMsg && (schMsg.className='text-sm text-red-600'); }
+            }
+            function nextWorkStartISO(){
+                const rng = (schWork && schWork.value ? schWork.value : '08:30-17:30').split('-')[0];
+                const [hh, mm] = rng.split(':').map(x=>parseInt(x,10));
+                const now = new Date();
+                let target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh||8, mm||30, 0, 0);
+                if (now >= target){ target.setDate(target.getDate()+1); }
+                return target.toISOString().slice(0,19);
+            }
+            async function pauseLunch(){
+                schMsg && (schMsg.textContent = '');
+                try{
+                    const res = await fetch('/api/schedule/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ minutes: 60 }) });
+                    const data = await res.json().catch(()=>({}));
+                    if (res.ok){ schMsg && (schMsg.textContent = 'Paused for lunch'); schMsg && (schMsg.className='text-sm text-yellow-700'); renderScheduleBanner(data.state || {}); }
+                    else { schMsg && (schMsg.textContent = (data.error || 'Failed')); schMsg && (schMsg.className='text-sm text-red-600'); }
+                }catch(e){ schMsg && (schMsg.textContent = 'Request failed'); schMsg && (schMsg.className='text-sm text-red-600'); }
+            }
+            async function pauseUntilNextWork(){
+                schMsg && (schMsg.textContent = '');
+                try{
+                    const until = nextWorkStartISO();
+                    const res = await fetch('/api/schedule/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ until }) });
+                    const data = await res.json().catch(()=>({}));
+                    if (res.ok){ schMsg && (schMsg.textContent = 'Paused until next work start'); schMsg && (schMsg.className='text-sm text-gray-700'); renderScheduleBanner(data.state || {}); }
+                    else { schMsg && (schMsg.textContent = (data.error || 'Failed')); schMsg && (schMsg.className='text-sm text-red-600'); }
+                }catch(e){ schMsg && (schMsg.textContent = 'Request failed'); schMsg && (schMsg.className='text-sm text-red-600'); }
+            }
+            async function pauseByMinutes(){
+                schMsg && (schMsg.textContent = '');
+                const minutes = parseInt((schPauseMin && schPauseMin.value)||'0',10);
+                if (!minutes || minutes < 1){ schMsg && (schMsg.textContent = 'Minutes required'); schMsg && (schMsg.className='text-sm text-red-600'); return; }
+                try{
+                    const res = await fetch('/api/schedule/pause', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ minutes }) });
+                    const data = await res.json().catch(()=>({}));
+                    if (res.ok){ schMsg && (schMsg.textContent = `Paused for ${minutes} min`); schMsg && (schMsg.className='text-sm text-gray-700'); renderScheduleBanner(data.state || {}); }
+                    else { schMsg && (schMsg.textContent = (data.error || 'Failed')); schMsg && (schMsg.className='text-sm text-red-600'); }
+                }catch(e){ schMsg && (schMsg.textContent = 'Request failed'); schMsg && (schMsg.className='text-sm text-red-600'); }
+            }
+            if (btnSchSave) btnSchSave.addEventListener('click', saveSchedule);
+            if (btnSchResume) btnSchResume.addEventListener('click', resumeNow);
+            if (btnSchPauseLunch) btnSchPauseLunch.addEventListener('click', pauseLunch);
+            if (btnSchPauseOff) btnSchPauseOff.addEventListener('click', pauseUntilNextWork);
+            if (btnSchPauseMin) btnSchPauseMin.addEventListener('click', pauseByMinutes);
+            // periodic refresh
+            setInterval(loadTrackingState, 15000);
+            // Respect tracking state in notifications
+            let _trackingCache = { tracking_active: true, suppress_alerts: false };
+            async function refreshTrackingCache(){
+                try{ const res = await fetch('/api/schedule/state'); if (res.ok){ _trackingCache = await res.json(); } }catch(e){}
+            }
+            refreshTrackingCache(); setInterval(refreshTrackingCache, 15000);
+
+            function setActiveTab(which){
+                // reset all (guard each element)
+                [tabEmp, tabCam, tabSys, tabSch].forEach(t=>{ if (t) t.classList.remove('border-b-2','border-primary','text-primary'); });
+                [secEmp, secCam, secSys, secSch].forEach(s=>{ if (s) s.classList.add('hidden'); });
+                if (which === 'employee'){
+                    if (tabEmp) tabEmp.classList.add('border-b-2','border-primary','text-primary');
+                    if (secEmp) secEmp.classList.remove('hidden');
+                } else if (which === 'camera'){
+                    if (tabCam) tabCam.classList.add('border-b-2','border-primary','text-primary');
+                    if (secCam) secCam.classList.remove('hidden');
+                } else if (which === 'system'){
+                    if (tabSys) tabSys.classList.add('border-b-2','border-primary','text-primary');
+                    if (secSys) secSys.classList.remove('hidden');
+                } else if (which === 'schedule'){
+                    if (tabSch) tabSch.classList.add('border-b-2','border-primary','text-primary');
+                    if (secSch) secSch.classList.remove('hidden');
+                    loadTrackingState();
+                }
+            }
+            if (tabEmp) tabEmp.addEventListener('click', ()=>{ setActiveTab('employee'); loadEmployees(); });
+            if (tabCam) tabCam.addEventListener('click', ()=>{ setActiveTab('camera'); loadCameraStatus(); });
+            if (tabSys) tabSys.addEventListener('click', ()=>{ setActiveTab('system'); });
+            if (tabSch) tabSch.addEventListener('click', ()=>{ setActiveTab('schedule'); });
+
+            // Manage System: Reset System button
+            const btnResetSystem = document.getElementById('btn-reset-system');
+
+            // Default to Schedule tab on load so the UI is visible
+            if (secSch) { setActiveTab('schedule'); }
+            const sysResetMsg = document.getElementById('sys-reset-msg');
+            if (btnResetSystem){
+                btnResetSystem.addEventListener('click', async ()=>{
+                    const confirmReset = confirm('Are you sure you want to restart the system now?');
+                    if (!confirmReset) return;
+                    btnResetSystem.disabled = true;
+                    if (sysResetMsg){ sysResetMsg.textContent = 'Restarting...'; sysResetMsg.className = 'text-sm ml-2 text-gray-600'; }
+                    try{
+                        const res = await fetch('/api/system/restart', { method:'POST' });
+                        const data = await res.json().catch(()=>({}));
+                        if (res.ok){
+                            if (sysResetMsg){ sysResetMsg.textContent = 'System is restarting...'; sysResetMsg.className = 'text-sm ml-2 text-green-600'; }
+                            // Give the server a moment, then try pinging or instruct user
+                            setTimeout(()=>{ btnResetSystem.disabled = false; }, 3000);
+                        } else {
+                            if (sysResetMsg){ sysResetMsg.textContent = data.error || 'Failed to restart'; sysResetMsg.className = 'text-sm ml-2 text-red-600'; }
+                            btnResetSystem.disabled = false;
+                        }
+                    }catch(err){
+                        if (sysResetMsg){ sysResetMsg.textContent = 'Request failed'; sysResetMsg.className = 'text-sm ml-2 text-red-600'; }
+                        btnResetSystem.disabled = false;
+                    }
+                });
+            }
+
+            // --- Manage Employee: list/edit/delete ---
+            const empTable = document.getElementById('employee-table');
+            const btnRefreshEmp = document.getElementById('btn-refresh-emp');
+            if (btnRefreshEmp) btnRefreshEmp.addEventListener('click', loadEmployees);
+
+            async function loadEmployees(){
+                if (!empTable) return;
+                empTable.innerHTML = '<tr><td class="px-3 py-2" colspan="8">Loading...</td></tr>';
+                try{
+                    const res = await fetch('/api/employees');
+                    const rows = await res.json();
+                    if (!Array.isArray(rows) || rows.length===0){
+                        empTable.innerHTML = '<tr><td class="px-3 py-2 text-gray-500" colspan="8">No employees</td></tr>';
+                        return;
+                    }
+                    empTable.innerHTML = '';
+                    rows.forEach(e=>{
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="px-3 py-2">${e.id}</td>
+                            <td class="px-3 py-2">${e.employee_code||''}</td>
+                            <td class="px-3 py-2">${e.name||''}</td>
+                            <td class="px-3 py-2">${e.department||''}</td>
+                            <td class="px-3 py-2">${e.position||''}</td>
+                            <td class="px-3 py-2">${e.phone_number||''}</td>
+                            <td class="px-3 py-2">${e.is_active? 'Yes':'No'}</td>
+                            <td class="px-3 py-2">
+                                <button class="text-blue-600 mr-2 underline" data-act="edit" data-id="${e.id}">Edit</button>
+                                <button class="text-red-600 underline" data-act="del" data-id="${e.id}">Delete</button>
+                            </td>`;
+                        empTable.appendChild(tr);
+                    });
+                }catch(err){
+                    console.error(err);
+                    empTable.innerHTML = '<tr><td class="px-3 py-2 text-danger" colspan="8">Failed to load</td></tr>';
+                }
+            }
+
+            // Re-add delegated click handler for Edit/Delete actions
+            if (empTable){
+                empTable.addEventListener('click', async (ev)=>{
+                    const t = ev.target;
+                    if (!(t instanceof Element)) return;
+                    const id = t.getAttribute('data-id');
+                    const act = t.getAttribute('data-act');
+                    if (!id || !act) return;
+                    if (act === 'del'){
+                        // Collect row info for confirmation context
+                        const row = t.closest('tr');
+                        const code = row?.children?.[1]?.textContent?.trim() || '';
+                        const name = row?.children?.[2]?.textContent?.trim() || '';
+                        const title = name ? `${name} (ID ${id})` : `ID ${id}`;
+                        const confirmMsg = `You are about to delete employee ${title}.\nThis will remove face templates and attendance records.\n\nTo confirm, type the employee code: "${code}"`;
+                        const typed = prompt(confirmMsg, '');
+                        if (typed === null) return; // cancelled
+                        if ((code || '').trim() !== (typed || '').trim()){
+                            alert('Deletion cancelled: code mismatch');
+                            return;
+                        }
+                        try{
+                            const resp = await fetch(`/api/employees/${id}`, { method:'DELETE' });
+                            if (!resp.ok){
+                                const err = await resp.json().catch(()=>({error:'Delete failed'}));
+                                alert(err.error || 'Delete failed');
+                                return;
+                            }
+                            loadEmployees();
+                        }catch(e){
+                            console.error(e);
+                            alert('Delete error');
+                        }
+                    } else if (act === 'edit'){
+                        // Build emp object from current table row
+                        const row = t.closest('tr');
+                        if (!row) return;
+                        const data = {
+                            id: Number(id),
+                            employee_code: row.children[1]?.textContent || '',
+                            name: row.children[2]?.textContent || '',
+                            department: row.children[3]?.textContent || '',
+                            position: row.children[4]?.textContent || '',
+                            phone_number: row.children[5]?.textContent || '',
+                            is_active: (row.children[6]?.textContent || '') === 'Yes',
+                        };
+                        openEdit(data);
+                    }
+                });
+            }
+
+            // Edit modal handlers
+            const editModal = document.getElementById('edit-employee-modal');
+            const closeEditBtn = document.getElementById('close-edit-employee');
+            const saveEditBtn = document.getElementById('save-edit-employee');
+            const fId = document.getElementById('edit-id');
+            const fCode = document.getElementById('edit-code');
+            const fName = document.getElementById('edit-name');
+            const fDept = document.getElementById('edit-dept');
+            const fPos = document.getElementById('edit-pos');
+            const fPhone = document.getElementById('edit-phone');
+            const fActive = document.getElementById('edit-active');
+            const editFaceList = document.getElementById('edit-face-templates');
+
+            async function loadFaceTemplates(empId){
+                if (!editFaceList) return;
+                editFaceList.innerHTML = '<div class="text-sm text-gray-500">Loading...</div>';
+                try{
+                    const res = await fetch(`/api/employees/${empId}/face_templates`);
+                    if (!res.ok){
+                        editFaceList.innerHTML = '<div class="text-sm text-danger">Failed to load</div>';
+                        return;
+                    }
+                    const items = await res.json();
+                    if (!Array.isArray(items) || items.length===0){
+                        editFaceList.innerHTML = '<div class="text-sm text-gray-500">No templates</div>';
+                        return;
+                    }
+                    // Render thumbnails if image_url present, else fallback to small embedding preview
+                    function parseFloat32FromB64(b64){
+                        try{
+                            const binary = atob(b64);
+                            const len = binary.length;
+                            const bytes = new Uint8Array(len);
+                            for (let i=0; i<len; i++) bytes[i] = binary.charCodeAt(i);
+                            const f32 = new Float32Array(bytes.buffer);
+                            return Array.from(f32);
+                        }catch(_){ return null; }
+                    }
+                    editFaceList.innerHTML = '';
+                    items.forEach(t=>{
+                        const card = document.createElement('div');
+                        card.className = 'border rounded p-2 bg-white flex items-start gap-2';
+                        let left = '';
+                        if (t.image_url){
+                            left = `<img src="${t.image_url}" alt="face" class="w-16 h-16 object-cover rounded border"/>`;
+                        } else {
+                            const dims = parseFloat32FromB64(t.embedding_b64);
+                            const dimText = (dims && dims.length) ? `${dims.length}D` : 'unknown';
+                            const firsts = (dims && dims.length) ? dims.slice(0,8).map(v=>v.toFixed(3)).join(', ') : 'n/a';
+                            left = `<div class="w-16 h-16 rounded bg-gray-100 border flex items-center justify-center text-[10px] text-gray-500">${dimText}</div>`;
+                        }
+                        const created = t.created_at || '';
+                        const embedPreview = (!t.image_url ? (()=>{
+                            const dims = parseFloat32FromB64(t.embedding_b64);
+                            const firsts = (dims && dims.length) ? dims.slice(0,8).map(v=>v.toFixed(3)).join(', ') : 'n/a';
+                            return `<div class="text-xs mt-1"><span class="text-gray-500">[0..7]:</span> ${firsts}</div>`;
+                        })() : '');
+                        card.innerHTML = `
+                            ${left}
+                            <div>
+                                <div class="text-sm"><span class="font-medium">Template #${t.id}</span></div>
+                                <div class="text-xs text-gray-500">${created}</div>
+                                <div class="text-xs">Pose: <span class="font-medium">${t.pose_label||'-'}</span> · Quality: <span class="font-medium">${t.quality_score!=null? t.quality_score.toFixed(2) : '-'}</span></div>
+                                ${embedPreview}
+                            </div>`;
+                        editFaceList.appendChild(card);
+                    });
+                }catch(err){
+                    console.error(err);
+                    editFaceList.innerHTML = '<div class="text-sm text-danger">Error</div>';
+                }
+            }
+
+            function openEdit(emp){
+                if (!editModal) return;
+                fId.value = emp.id;
+                fCode.value = emp.employee_code||'';
+                fName.value = emp.name||'';
+                fDept.value = emp.department||'';
+                fPos.value = emp.position||'';
+                fPhone.value = emp.phone_number||'';
+                fActive.checked = !!emp.is_active;
+                editModal.classList.remove('hidden');
+                if (emp && emp.id){ loadFaceTemplates(emp.id); }
+            }
+            function closeEdit(){ if (editModal) editModal.classList.add('hidden'); }
+            if (closeEditBtn) closeEditBtn.addEventListener('click', closeEdit);
+
+            if (saveEditBtn){
+                saveEditBtn.addEventListener('click', async ()=>{
+                    const id = Number(fId.value);
+                    const payload = {
+                        employee_code: fCode.value.trim(),
+                        name: fName.value.trim(),
+                        department: fDept.value.trim()||null,
+                        position: fPos.value.trim()||null,
+                        phone_number: fPhone.value.trim()||null,
+                        is_active: !!fActive.checked
+                    };
+                    await fetch(`/api/employees/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    closeEdit();
+                    loadEmployees();
+                });
+            }
+
+            // Add employee handlers
+            const addModal = document.getElementById('add-employee-modal');
+            const btnAddEmp = document.getElementById('btn-add-emp');
+            const closeAddEmp = document.getElementById('close-add-employee');
+            const saveAddEmp = document.getElementById('save-add-employee');
+            const aCode = document.getElementById('add-code');
+            const aName = document.getElementById('add-name');
+            const aDept = document.getElementById('add-dept');
+            const aPos = document.getElementById('add-pos');
+            const aPhone = document.getElementById('add-phone');
+            const aActive = document.getElementById('add-active');
+            // Face capture elements
+            const addVideo = document.getElementById('add-video');
+            const addCanvas = document.getElementById('add-canvas');
+            const addStartCam = document.getElementById('btn-add-startcam');
+            const addCapture = document.getElementById('btn-add-capture');
+            const addRetake = document.getElementById('btn-add-retake');
+            const addSnapshot = document.getElementById('add-snapshot');
+            const addFaceStatus = document.getElementById('add-face-status');
+            let addStream = null;
+            let addSnapshotDataUrl = null;
+            let addCreatedEmployeeId = null; // persist created employee while modal open
+
+            async function startAddCam(){
+                try{
+                    if (addStream){ return; }
+                    addStream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+                    addVideo.srcObject = addStream;
+                    addFaceStatus.textContent = 'Camera ready';
+                }catch(e){
+                    console.error(e);
+                    addFaceStatus.textContent = 'Camera error';
+                    alert('Cannot access camera');
+                }
+            }
+            function stopAddCam(){
+                try{
+                    if (addStream){ addStream.getTracks().forEach(t=>t.stop()); }
+                }catch(_){/* noop */}
+                addStream = null;
+                addVideo.srcObject = null;
+            }
+            function captureAddFrame(){
+                if (!addVideo.videoWidth){
+                    alert('Camera not ready');
+                    return;
+                }
+                addCanvas.width = addVideo.videoWidth;
+                addCanvas.height = addVideo.videoHeight;
+                const ctx = addCanvas.getContext('2d');
+                ctx.drawImage(addVideo, 0, 0);
+                const dataUrl = addCanvas.toDataURL('image/jpeg');
+                addSnapshotDataUrl = dataUrl;
+                const currentPose = document.querySelector('.pose-btn.bg-primary').getAttribute('data-pose');
+                const snapshots = { front: null, left: null, right: null };
+                snapshots[currentPose] = dataUrl;
+                addSnapshot.src = dataUrl;
+                addSnapshot.classList.remove('hidden');
+                addRetake.classList.remove('hidden');
+                const thumbMap = { front: document.getElementById('thumb-front'), left: document.getElementById('thumb-left'), right: document.getElementById('thumb-right') };
+                const th = thumbMap[currentPose];
+                if (th){ th.src = dataUrl; th.classList.remove('hidden'); }
+                addFaceStatus.textContent = `Captured pose: ${currentPose}`;
+            }
+            function resetAddFace(){
+                addSnapshotDataUrl = null;
+                addSnapshot.classList.add('hidden');
+                addRetake.classList.add('hidden');
+                addFaceStatus.textContent = '';
+                const currentPose = 'front';
+                const poseButtons = Array.from(document.querySelectorAll('.pose-btn'));
+                poseButtons.forEach(b=>b.classList.remove('bg-primary','text-white'));
+                const first = poseButtons.find(b=>b.getAttribute('data-pose')==='front');
+                if (first){ first.classList.add('bg-primary','text-white'); }
+                const poseActive = document.getElementById('pose-active');
+                if (poseActive) poseActive.textContent = 'front';
+                const snapshots = { front: null, left: null, right: null };
+                snapshots.front = snapshots.left = snapshots.right = null;
+                const qualities = { front: null, left: null, right: null };
+                qualities.front = qualities.left = qualities.right = null;
+                [document.getElementById('thumb-front'), document.getElementById('thumb-left'), document.getElementById('thumb-right')].forEach(t=>{ if(t){ t.classList.add('hidden'); t.removeAttribute('src'); } });
+                [document.getElementById('q-front'), document.getElementById('q-left'), document.getElementById('q-right')].forEach(q=>{ if(q){ q.textContent=''; } });
+            }
+
+            // Restore modal open/close helpers
+            function openAdd(){
+                if (addModal) addModal.classList.remove('hidden');
+                resetAddFace();
+                stopAddCam();
+                addCreatedEmployeeId = null;
+            }
+            function closeAdd(){
+                if (addModal) addModal.classList.add('hidden');
+                stopAddCam();
+                addCreatedEmployeeId = null;
+            }
+
+            // Button handlers
+            if (btnAddEmp) btnAddEmp.addEventListener('click', openAdd);
+            if (closeAddEmp) closeAddEmp.addEventListener('click', closeAdd);
+            if (addStartCam) addStartCam.addEventListener('click', startAddCam);
+            if (addCapture) addCapture.addEventListener('click', captureAddFrame);
+            if (addRetake) addRetake.addEventListener('click', ()=>{ resetAddFace(); startAddCam(); });
+            // Pose switching
+            const poseButtons = Array.from(document.querySelectorAll('.pose-btn'));
+            if (poseButtons && poseButtons.length){
+                poseButtons.forEach(btn=>{
+                    btn.addEventListener('click', ()=>{
+                        poseButtons.forEach(b=>b.classList.remove('bg-primary','text-white'));
+                        btn.classList.add('bg-primary','text-white');
+                        const currentPose = btn.getAttribute('data-pose') || 'front';
+                        const poseActive = document.getElementById('pose-active');
+                        if (poseActive) poseActive.textContent = currentPose;
+                    });
+                });
+            }
+
+            if (saveAddEmp){
+                saveAddEmp.addEventListener('click', async ()=>{
+                    // prevent double clicks
+                    saveAddEmp.disabled = true;
+                    const originalText = saveAddEmp.textContent;
+                    saveAddEmp.textContent = 'Saving...';
+
+                    try{
+                        // Step 1: ensure employee exists (create once)
+                        if (!addCreatedEmployeeId){
+                            const payload = {
+                                employee_code: aCode.value.trim(),
+                                name: aName.value.trim(),
+                                department: aDept.value.trim()||null,
+                                position: aPos.value.trim()||null,
+                                phone_number: aPhone.value.trim()||null,
+                                is_active: (aActive ? !!aActive.checked : true)
+                            };
+                            if (!payload.employee_code || !payload.name){
+                                alert('Employee code and name are required');
+                                return;
+                            }
+                            const res = await fetch('/api/employees', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            if (!res.ok){
+                                const err = await res.json().catch(()=>({error:'Failed'}));
+                                alert(err.error || 'Failed to create');
+                                return;
+                            }
+                            const created = await res.json();
+                            addCreatedEmployeeId = created && created.id;
+                            addFaceStatus.textContent = 'Employee created. You can capture/retake and click Register to upload face.';
+                        }
+
+                        // Step 2: upload all captured pose snapshots with pose_label
+                        if (addCreatedEmployeeId){
+                            const entries = Object.entries({ front: document.getElementById('thumb-front'), left: document.getElementById('thumb-left'), right: document.getElementById('thumb-right') }).filter(([pose, data])=>!!data.src);
+                            if (entries.length){
+                                for (const [pose, data] of entries){
+                                    try{
+                                        const r2 = await fetch(`/api/employees/${addCreatedEmployeeId}/face_templates`, {
+                                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: data.src, pose_label: pose })
+                                        });
+                                        const jr = await r2.json().catch(()=>({}));
+                                        if (!r2.ok){
+                                            console.warn('Face registration failed:', jr);
+                                            addFaceStatus.textContent = `Face(${pose}) not registered: ${jr.error||'Unknown'}`;
+                                            alert(`Face(${pose}) not registered: ${jr.error||''}`);
+                                            continue; // continue with other poses
+                                        }
+                                        const qval = (jr && typeof jr.quality_score === 'number') ? jr.quality_score : null;
+                                        const qElMap = { front: document.getElementById('q-front'), left: document.getElementById('q-left'), right: document.getElementById('q-right') };
+                                        const qEl = qElMap[pose];
+                                        if (qEl){ qEl.textContent = `Quality: ${qval!=null? qval.toFixed(2) : '-'}`; }
+                                    }catch(err){
+                                        console.error(err);
+                                        addFaceStatus.textContent = `Face(${pose}) upload failed`;
+                                        alert(`Face(${pose}) upload failed`);
+                                    }
+                                }
+                                addFaceStatus.textContent = 'Registration completed';
+                                closeAdd();
+                                loadEmployees();
+                                return;
+                            }
+                        }
+                    } finally {
+                        saveAddEmp.disabled = false;
+                        saveAddEmp.textContent = originalText;
+                    }
+                });
+            }
+
+            // --- Manage Camera: status list with ON/OFF toggle via Socket.IO ---
+            const camList = document.getElementById('camera-status-list');
+            const btnRefreshCam = document.getElementById('btn-refresh-cam');
+            if (btnRefreshCam) btnRefreshCam.addEventListener('click', loadCameraStatus);
+
+            // Add Camera form elements
+            const camAddName = document.getElementById('cam-add-name');
+            const camAddUrl = document.getElementById('cam-add-url');
+            const camAddId = document.getElementById('cam-add-id');
+            const camAddMsg = document.getElementById('cam-add-msg');
+            const btnAddCamera = document.getElementById('btn-add-camera');
+            if (btnAddCamera) {
+                btnAddCamera.addEventListener('click', async () => {
+                    if (!camAddName || !camAddUrl) return;
+                    const name = camAddName.value.trim();
+                    const rtsp_url = camAddUrl.value.trim();
+                    const idVal = camAddId && camAddId.value ? Number(camAddId.value) : null;
+                    camAddMsg.textContent = '';
+                    if (!name || !rtsp_url) {
+                        camAddMsg.className = 'text-sm text-red-600';
+                        camAddMsg.textContent = 'Name and RTSP/Source are required';
+                        return;
+                    }
+                    btnAddCamera.disabled = true;
+                    const original = btnAddCamera.textContent;
+                    btnAddCamera.textContent = 'Adding...';
+                    try {
+                        const res = await fetch('/api/cameras', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name, rtsp_url, id: idVal })
+                        });
+                        const data = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                            const msg = data && data.error ? data.error : `HTTP ${res.status}`;
+                            camAddMsg.className = 'text-sm text-red-600';
+                            camAddMsg.textContent = msg;
+                            return;
+                        }
+                        camAddMsg.className = 'text-sm text-green-600';
+                        camAddMsg.textContent = 'Camera added';
+                        // clear inputs
+                        camAddName.value = '';
+                        camAddUrl.value = '';
+                        if (camAddId) camAddId.value = '';
+                        // refresh lists
+                        loadCameraStatus();
+                        if (typeof loadCameras === 'function') {
+                            loadCameras();
+                        } else {
+                            // Legacy: reload button panel by re-fetching /api/cameras
+                            const evt = new Event('refresh-cameras');
+                            document.dispatchEvent(evt);
+                        }
+                    } catch (e) {
+                        console.error(e);
+                        camAddMsg.className = 'text-sm text-red-600';
+                        camAddMsg.textContent = 'Failed to add camera';
+                    } finally {
+                        btnAddCamera.disabled = false;
+                        btnAddCamera.textContent = original;
+                    }
+                });
+            }
+
+            function loadCameraStatus(){
+                if (!camList) return;
+                camList.innerHTML = '<div class="text-sm text-gray-500">Loading...</div>';
+                socket.emit('get_camera_statuses');
+            }
+
+            function renderCameraCards(items){
+                if (!camList) return;
+                if (!Array.isArray(items) || items.length === 0){
+                    camList.innerHTML = '<div class="text-sm text-gray-500">No cameras</div>';
+                    return;
+                }
+                camList.innerHTML = '';
+                items.forEach(c=>{
+                    const card = document.createElement('div');
+                    card.className = 'border rounded p-3 flex items-center justify-between';
+                    const name = c.name || ('CAM '+c.cam_id) || ('CAM '+c.id);
+                    const id = (c.cam_id != null) ? c.cam_id : c.id;
+                    const running = !!(c.running != null ? c.running : c.online);
+                    card.innerHTML = `
+                        <div>
+                            <div class="font-medium">${name}</div>
+                            <div class="text-xs text-gray-500">ID: ${id}</div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-block w-2.5 h-2.5 rounded-full ${running ? 'bg-green-500' : 'bg-red-500'}" data-dot="${id}"></span>
+                                <span class="text-sm" data-status-text="${id}">${running ? 'Online' : 'Offline'}</span>
+                            </div>
+                            <label class="inline-flex items-center cursor-pointer select-none">
+                                <input type="checkbox" class="sr-only peer" data-toggle="${id}" ${running ? 'checked' : ''} />
+                                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-green-500 relative transition">
+                                    <span class="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition peer-checked:translate-x-5"></span>
+                                </div>
+                                <span class="ml-2 text-sm">${running ? 'ON' : 'OFF'}</span>
+                            </label>
+                        </div>`;
+                    camList.appendChild(card);
+                });
+                // bind toggle handlers
+                camList.querySelectorAll('input[data-toggle]').forEach(chk=>{
+                    chk.addEventListener('change', (e)=>{
+                        const el = e.target;
+                        const camId = Number(el.getAttribute('data-toggle'));
+                        const enable = !!el.checked;
+                        // optimistic UI: disable while applying
+                        el.disabled = true;
+                        socket.emit('toggle_camera', { cam_id: camId, enable });
+                        // label ON/OFF immediate
+                        const label = el.closest('label');
+                        if (label){
+                            const span = label.querySelector('span.ml-2');
+                            if (span) span.textContent = enable ? 'ON' : 'OFF';
+                        }
+                    });
+                });
+            }
+
+            // socket listeners for camera statuses
+            socket.on('camera_statuses', ({items})=>{
+                renderCameraCards(items||[]);
+            });
+            socket.on('camera_status', ({cam_id, running})=>{
+                // update specific card UI
+                const dot = camList && camList.querySelector(`[data-dot="${cam_id}"]`);
+                const txt = camList && camList.querySelector(`[data-status-text="${cam_id}"]`);
+                const chk = camList && camList.querySelector(`input[data-toggle="${cam_id}"]`);
+                if (dot){
+                    dot.classList.remove('bg-green-500','bg-red-500');
+                    dot.classList.add(running ? 'bg-green-500' : 'bg-red-500');
+                }
+                if (txt){ txt.textContent = running ? 'Online' : 'Offline'; }
+                if (chk){ chk.checked = !!running; chk.disabled = false; }
+            });
+
+            // --- Employee Tracking: poll and render ---
+            const elEmpList = document.getElementById('employee-list');
+            const elActiveCount = document.getElementById('active-count');
+            const elPresent = document.getElementById('present-count');
+            const elAlerts = document.getElementById('alert-count');
+            const elTotal = document.getElementById('total-count');
+            const elNotifBadge = document.getElementById('notification-badge');
+            const elNotifBtn = document.getElementById('notification-btn');
+            const elNotifDropdown = document.getElementById('notification-dropdown');
+            const elNotifList = document.getElementById('notification-list');
+            const btnClearNotifs = document.getElementById('btn-clear-notifs');
+            let notifOpen = false;
+            // Track previous presence state to detect transitions
+            const prevByEmp = new Map();
+
+            // Simple sound (440-880Hz beep ~200ms) using Web Audio API with throttle
+            let _lastSoundTs = 0;
+            function playNotifSound(){
+                try{
+                    const now = Date.now();
+                    if (now - _lastSoundTs < 1500) return; // throttle 1.5s
+                    _lastSoundTs = now;
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(660, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.2);
+                } catch(e) { /* ignore */ }
+            }
+
+            // NotificationCenter: manages history (with localStorage), unread badge, rendering, dedup
+            const NotificationCenter = (function(){
+                const state = {
+                    history: [],        // {msg, ts}
+                    unread: 0,
+                    lastKeys: new Map(), // key -> ts
+                };
+                const STORAGE_KEY = 'notif_history_v1';
+                function loadHistory(){
+                    try{
+                        const raw = localStorage.getItem(STORAGE_KEY);
+                        if (!raw) return;
+                        const arr = JSON.parse(raw);
+                        if (Array.isArray(arr)) state.history = arr.filter(x=>x && x.msg);
+                    } catch(e) {}
+                }
+                function saveHistory(){
+                    try{
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.history.slice(0, 100)));
+                    } catch(e) {}
+                }
+                function formatHistoryRow(h){
+                    const when = formatTs(h.ts);
+                    return `<div class="px-4 py-3 text-sm text-blue-700 border-b last:border-b-0 border-gray-100">${h.msg} <span class="block text-[10px] text-gray-400">${when}</span></div>`;
+                }
+                function render(){
+                    if (!elNotifList) return;
+                    const parts = [];
+                    // history only (no header)
+                    state.history.forEach(h => parts.push(formatHistoryRow(h)));
+                    elNotifList.innerHTML = parts.length ? parts.join('') : '<div class="px-4 py-3 text-sm text-gray-500">No notifications</div>';
+                    // Badge shows unread count
+                    if (elNotifBadge){
+                        const count = state.unread;
+                        if (count > 0){
+                            elNotifBadge.textContent = '!';
+                            elNotifBadge.classList.remove('hidden');
+                        } else {
+                            elNotifBadge.classList.add('hidden');
+                        }
+                    }
+                }
+                function pushRaw(msg){
+                    state.history.unshift({ msg, ts: Date.now() });
+                    if (state.history.length > 200) state.history.length = 200;
+                    state.unread += 1;
+                    saveHistory();
+                    playNotifSound();
+                    render();
+                }
+                function pushKeyed(key, msg, ttlMs){
+                    const now = Date.now();
+                    const last = state.lastKeys.get(key) || 0;
+                    if (now - last < (ttlMs || 60000)) return; // skip if within TTL
+                    state.lastKeys.set(key, now);
+                    pushRaw(msg);
+                }
+                loadHistory();
+                // initial render from stored history
+                setTimeout(render, 0);
+                return {
+                    render,
+                    push: pushRaw,
+                    pushKeyed,
+                    clear(){
+                        state.history.length = 0;
+                        saveHistory();
+                        render();
+                    },
+                    resetUnread(){ state.unread = 0; render(); }
+                }
+            })();
+            // ...
+
+            function durationText(item){
+                // If currently present (<= 60s), show Just now; else show 'Xm ago'
+                if (item && item.is_present) return 'Just now';
+                const sec = (item && typeof item.seconds_since === 'number') ? item.seconds_since : null;
+                if (sec == null) return '—';
+                if (sec < 60) return `${sec}s ago`;
+                if (sec < 3600) return `${Math.floor(sec/60)} min ago`;
+                if (sec < 86400) return `${Math.floor(sec/3600)} h ago`;
+                return `${Math.floor(sec/86400)} d ago`;
+            }
+
+            // Deprecated helper removed; handled by NotificationCenter
+
+            function renderTracking(state){
+                if (!state) return;
+                const present = state.present || 0;
+                const alerts = state.alerts || 0;
+                const total = state.total || 0;
+                const activeTotal = state.active_total || 0;
+                if (elActiveCount) elActiveCount.textContent = `${activeTotal} Active`;
+                if (elPresent) elPresent.textContent = present;
+                if (elAlerts) elAlerts.textContent = alerts;
+                if (elTotal) elTotal.textContent = total;
+                // Badge handled by NotificationCenter
+                if (!elEmpList) return;
+                const list = Array.isArray(state.employees) ? state.employees : [];
+                // Detect transitions and push notifications (history only, with dedup)
+                list.forEach(it => {
+                    const prev = prevByEmp.get(it.employee_id);
+                    // previously off, now present => push return notification
+                    if (prev && prev.is_present === false && it.is_present === true){
+                        const mins = Math.max(0, Math.floor((prev.seconds_since || 0)/60));
+                        const name = it.name || `Employee ${it.employee_id}`;
+                        NotificationCenter.pushKeyed(`back:${it.employee_id}`, `${name} back to area after ${mins} min`, 60000);
+                    }
+                    // previously present/unknown, now off => push last seen notification
+                    if ((!prev || prev.is_present === true) && it.is_present === false){
+                        const name = it.name || `Employee ${it.employee_id}`;
+                        NotificationCenter.pushKeyed(`seen:${it.employee_id}`, `${name} last seen ${durationText(it)}` , 60000);
+                    }
+                    prevByEmp.set(it.employee_id, { is_present: !!it.is_present, seconds_since: it.seconds_since });
+                });
+                // No separate live alerts rendering anymore; only push history
+                if (list.length === 0){
+                    elEmpList.innerHTML = '<div class="text-sm text-gray-500">No active employees</div>';
+                    return;
+                }
+                elEmpList.innerHTML = '';
+                list.forEach(item=>{
+                    const statusDot = item.is_present ? 'available' : 'off';
+                    const camName = item.camera_name || (item.camera_id ? `CAM ${item.camera_id}` : '—');
+                    const card = document.createElement('div');
+                    card.className = 'border rounded-lg p-3 flex items-center justify-between mb-2';
+                    card.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full status-dot ${statusDot}"></span>
+                            <div>
+                                <div class="font-medium">${item.name || 'Unknown'}</div>
+                                <div class="text-xs text-gray-500">${item.department || ''}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm">${camName}</div>
+                            <div class="text-xs text-gray-500">${durationText(item)}</div>
+                        </div>`;
+                    elEmpList.appendChild(card);
+                });
+            }
+
+            // --- Notification dropdown interactions ---
+            if (elNotifBtn && elNotifDropdown){
+                elNotifBtn.addEventListener('click', (e)=>{
+                    e.stopPropagation();
+                    notifOpen = !notifOpen;
+                    elNotifBtn.setAttribute('aria-expanded', notifOpen ? 'true' : 'false');
+                    if (notifOpen){
+                        elNotifDropdown.classList.remove('hidden');
+                        NotificationCenter.resetUnread();
+                    } else {
+                        elNotifDropdown.classList.add('hidden');
+                    }
+                });
+                // prevent inside clicks from closing
+                elNotifDropdown.addEventListener('click', (e)=> e.stopPropagation());
+                // click outside to close
+                document.addEventListener('click', ()=>{
+                    if (!notifOpen) return;
+                    notifOpen = false;
+                    elNotifBtn.setAttribute('aria-expanded', 'false');
+                    elNotifDropdown.classList.add('hidden');
+                });
+                if (btnClearNotifs){
+                    btnClearNotifs.addEventListener('click', ()=> NotificationCenter.clear());
+                }
+            }
+
+            let trackingTimer = null;
+            async function pollTracking(){
+                try{
+                    const res = await fetch('/api/tracking/state');
+                    const state = await res.json();
+                    renderTracking(state);
+                    // Do not auto-start tracking here. Respect Manage Camera toggles so that
+                    // when all cameras are OFF, nothing starts implicitly.
+                }catch(e){ console.warn('tracking/state error', e); }
+            }
+            function startTrackingPoll(){
+                if (trackingTimer) return;
+                pollTracking();
+                trackingTimer = setInterval(pollTracking, 2000);
+            }
+            startTrackingPoll();
+
+            // --- Admin: Reset Logs (Report page) ---
+            const btnResetLogs = document.getElementById('btn-reset-logs');
+
+            // Create modal lazily when first needed
+            let resetModal = null;
+            function ensureResetModal(){
+                if (resetModal) return resetModal;
+                resetModal = document.createElement('div');
+                resetModal.id = 'reset-logs-modal';
+                resetModal.className = 'fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden';
+                resetModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-5">
+                        <h3 class="text-lg font-semibold mb-3 text-primary">Reset Logs</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Table</label>
+                                <select id="reset-table" class="w-full border rounded px-2 py-1">
+                                    <option value="both">Both (Events + Alert Logs)</option>
+                                    <option value="events">Events only</option>
+                                    <option value="alert_logs">Alert Logs only</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">From Date (optional)</label>
+                                    <input id="reset-from" type="date" class="w-full border rounded px-2 py-1" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">To Date (optional)</label>
+                                    <input id="reset-to" type="date" class="w-full border rounded px-2 py-1" />
+                                </div>
+                            </div>
+                            <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs rounded p-2">
+                                Aksi ini akan menghapus data permanen. Kosongkan tanggal untuk menghapus SEMUA data pada tabel terpilih.
+                            </div>
+                        </div>
+                        <div class="mt-5 flex justify-end gap-2">
+                            <button id="reset-cancel" class="px-3 py-1.5 text-sm bg-gray-100 border border-gray-200 rounded">Cancel</button>
+                            <button id="reset-confirm" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded">Confirm Reset</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(resetModal);
+                // close on backdrop click
+                resetModal.addEventListener('click', (e)=>{
+                    if (e.target === resetModal){ resetModal.classList.add('hidden'); }
+                });
+                // bind buttons
+                resetModal.querySelector('#reset-cancel').addEventListener('click', ()=> resetModal.classList.add('hidden'));
+                resetModal.querySelector('#reset-confirm').addEventListener('click', async ()=>{
+                    const table = resetModal.querySelector('#reset-table').value;
+                    const from_date = resetModal.querySelector('#reset-from').value || null;
+                    const to_date = resetModal.querySelector('#reset-to').value || null;
+                    if (!confirm('Yakin ingin menghapus data sesuai pilihan?')) return;
+                    try{
+                        const res = await fetch('/api/admin/reset_logs', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ table, from_date, to_date })
+                        });
+                        const out = await res.json();
+                        if (!res.ok || !out.ok){
+                            alert('Reset gagal: ' + (out.error || res.status));
+                        } else {
+                            alert(`Reset berhasil. Events terhapus: ${out.deleted_events || 0}, Alert Logs terhapus: ${out.deleted_alert_logs || 0}`);
+                        }
+                    }catch(err){
+                        alert('Error melakukan reset: ' + err);
+                    } finally {
+                        resetModal.classList.add('hidden');
+                    }
+                });
+                return resetModal;
+            }
+
+            if (btnResetLogs){
+                btnResetLogs.addEventListener('click', ()=>{
+                    const m = ensureResetModal();
+                    m.classList.remove('hidden');
+                });
+            }
+
+            // --- Reports: Attendance & Alert Logs ---
+            const elRepFrom = document.getElementById('rep-from');
+            const elRepTo = document.getElementById('rep-to');
+            const elRepEmp = document.getElementById('rep-emp');
+            const elAttTable = document.getElementById('att-table');
+            const elAlertsTable = document.getElementById('alerts-table');
+            const btnLoadAtt = document.getElementById('btn-load-att');
+            const btnLoadAlerts = document.getElementById('btn-load-alerts');
+            const btnExportAtt = document.getElementById('btn-export-att');
+            const btnExportAlerts = document.getElementById('btn-export-alerts');
+
+            // Hold rows and sort state
+            let _attRows = [];
+            let _attSort = { key: 'date', dir: 'desc' };
+            let _alertRows = [];
+            let _alertSort = { key: 'timestamp', dir: 'desc' };
+
+            function buildQuery(base){
+                const params = new URLSearchParams();
+                if (elRepFrom && elRepFrom.value) params.set('from', elRepFrom.value);
+                if (elRepTo && elRepTo.value) params.set('to', elRepTo.value);
+                if (elRepEmp && elRepEmp.value) params.set('employee_id', elRepEmp.value);
+                const q = params.toString();
+                return base + (q ? ('?' + q) : '');
+            }
+
+            function updateExportLinks(){
+                if (btnExportAtt){
+                    const base = buildQuery('/api/report/attendance');
+                    btnExportAtt.href = base + (base.includes('?') ? '&' : '?') + 'format=csv';
+                }
+                if (btnExportAlerts){
+                    const base2 = buildQuery('/api/report/alerts');
+                    btnExportAlerts.href = base2 + (base2.includes('?') ? '&' : '?') + 'format=csv';
+                }
+            }
+
+            async function loadEmployeesForReport(){
+                if (!elRepEmp) return;
+                try{
+                    const res = await fetch('/api/employees');
+                    const data = await res.json();
+                    elRepEmp.innerHTML = '<option value="">All Employees</option>';
+                    (Array.isArray(data) ? data : []).forEach(e => {
+                        const opt = document.createElement('option');
+                        opt.value = String(e.id);
+                        opt.textContent = `${e.employee_code || 'EMP'} - ${e.name || ''}`;
+                        elRepEmp.appendChild(opt);
+                    });
+                }catch(e){ console.warn('loadEmployeesForReport error', e); }
+            }
+
+            function safe(val){ return val == null ? '' : String(val); }
+
+            function formatTs(val){
+                if (!val) return '';
+                // Try parse various inputs (ISO string or epoch millis)
+                let d;
+                if (typeof val === 'number'){
+                    d = new Date(val);
+                } else {
+                    const tryNum = Number(val);
+                    d = isNaN(tryNum) ? new Date(String(val)) : new Date(tryNum);
+                }
+                if (isNaN(d.getTime())) return safe(val);
+                const pad = n => String(n).padStart(2,'0');
+                const yyyy = d.getFullYear();
+                const mm = pad(d.getMonth()+1);
+                const dd = pad(d.getDate());
+                const hh = pad(d.getHours());
+                const mi = pad(d.getMinutes());
+                const ss = pad(d.getSeconds());
+                return `${yyyy}-${mm}-${dd} | ${hh}:${mi}:${ss}`;
+            }
+
+            function formatTimeOnly(val){
+                if (!val) return '';
+                let d;
+                if (typeof val === 'number'){
+                    d = new Date(val);
+                } else {
+                    const tryNum = Number(val);
+                    d = isNaN(tryNum) ? new Date(String(val)) : new Date(tryNum);
+                }
+                if (isNaN(d.getTime())) return safe(val);
+                const pad = n => String(n).padStart(2,'0');
+                const hh = pad(d.getHours());
+                const mi = pad(d.getMinutes());
+                const ss = pad(d.getSeconds());
+                return `${hh}:${mi}:${ss}`;
+            }
+
+            function parseForSort(val, key){
+                if (val == null) return null;
+                // For date and timestamps, prefer numeric time
+                if (key === 'date'){
+                    // Expecting YYYY-MM-DD
+                    const d = new Date(String(val));
+                    return isNaN(d.getTime()) ? String(val) : d.getTime();
+                }
+                if (key === 'first_in_ts' || key === 'last_out_ts' || key === 'timestamp'){
+                    const d = new Date(String(val));
+                    return isNaN(d.getTime()) ? String(val) : d.getTime();
+                }
+                return String(val).toLowerCase();
+            }
+
+            function sortRows(rows, key, dir){
+                const sign = dir === 'asc' ? 1 : -1;
+                return [...rows].sort((a, b) => {
+                    const va = parseForSort(a[key], key);
+                    const vb = parseForSort(b[key], key);
+                    if (va == null && vb == null) return 0;
+                    if (va == null) return 1; // nulls last
+                    if (vb == null) return -1;
+                    if (va < vb) return -sign;
+                    if (va > vb) return sign;
+                    return 0;
+                });
+            }
+
+            function mapAlertType(t){
+                if (!t) return '';
+                const u = String(t).toUpperCase();
+                if (u === 'RESOLVED') return 'ENTER';
+                if (u === 'BACK_TO_AREA') return 'EXIT';
+                return t;
+            }
+
+            function updateSortIndicators(tableEl, current){
+                if (!tableEl) return;
+                const ths = tableEl.querySelectorAll('thead th[data-sort-key]');
+                ths.forEach(th => {
+                    const key = th.getAttribute('data-sort-key');
+                    // store original label once
+                    if (!th.dataset.label){
+                        th.dataset.label = th.textContent.trim();
+                    }
+                    const label = th.dataset.label;
+                    if (current && key === current.key){
+                        const arrow = current.dir === 'asc' ? '▲' : '▼';
+                        th.innerHTML = `${label} <span class="text-xs text-gray-400">${arrow}</span>`;
+                    } else {
+                        th.innerHTML = label;
+                    }
+                });
+            }
+
+            function renderAttendance(){
+                if (!elAttTable) return;
+                const rows = sortRows(_attRows, _attSort.key, _attSort.dir);
+                updateSortIndicators(elAttTable.closest('table'), _attSort);
+                if (!Array.isArray(rows) || rows.length === 0){
+                    elAttTable.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-sm text-gray-500">No data</td></tr>';
+                    return;
+                }
+                elAttTable.innerHTML = '';
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-3 py-2">${safe(r.employee_code)}</td>
+                        <td class="px-3 py-2">${safe(r.employee_name)}</td>
+                        <td class="px-3 py-2">${safe(r.date)}</td>
+                        <td class="px-3 py-2">${formatTimeOnly(r.first_in_ts)}</td>
+                        <td class="px-3 py-2">${formatTimeOnly(r.last_out_ts)}</td>
+                        <td class="px-3 py-2">${safe(r.status)}</td>`;
+                    elAttTable.appendChild(tr);
+                });
+            }
+
+            async function loadAttendance(){
+                if (!elAttTable) return;
+                try{
+                    const url = buildQuery('/api/report/attendance');
+                    updateExportLinks();
+                    const res = await fetch(url);
+                    _attRows = await res.json();
+                    if (!Array.isArray(_attRows)) _attRows = [];
+                    renderAttendance();
+                }catch(e){
+                    console.warn('loadAttendance error', e);
+                    elAttTable.innerHTML = '<tr><td colspan="6" class="px-3 py-2 text-sm text-red-600">Failed to load</td></tr>';
+                }
+            }
+
+            function renderAlerts(){
+                if (!elAlertsTable) return;
+                const rows = sortRows(_alertRows, _alertSort.key, _alertSort.dir);
+                updateSortIndicators(elAlertsTable.closest('table'), _alertSort);
+                if (!Array.isArray(rows) || rows.length === 0){
+                    elAlertsTable.innerHTML = '<tr><td colspan="5" class="px-3 py-2 text-sm text-gray-500">No data</td></tr>';
+                    return;
+                }
+                elAlertsTable.innerHTML = '';
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-3 py-2">${formatTs(r.timestamp)}</td>
+                        <td class="px-3 py-2">${safe(r.employee_code)}</td>
+                        <td class="px-3 py-2">${safe(r.employee_name)}</td>
+                        <td class="px-3 py-2">${safe(mapAlertType(r.alert_type))}</td>
+                        <td class="px-3 py-2">${safe(r.message)}</td>`;
+                    elAlertsTable.appendChild(tr);
+                });
+            }
+
+            async function loadAlerts(){
+                if (!elAlertsTable) return;
+                try{
+                    const url = buildQuery('/api/report/alerts');
+                    updateExportLinks();
+                    const res = await fetch(url);
+                    _alertRows = await res.json();
+                    if (!Array.isArray(_alertRows)) _alertRows = [];
+                    renderAlerts();
+                }catch(e){
+                    console.warn('loadAlerts error', e);
+                    elAlertsTable.innerHTML = '<tr><td colspan="5" class="px-3 py-2 text-sm text-red-600">Failed to load</td></tr>';
+                }
+            }
+
+            // Sorting handlers
+            function attachSorting(){
+                // Attendance headers
+                const attTableEl = elAttTable ? elAttTable.closest('table') : null;
+                if (attTableEl){
+                    attTableEl.querySelectorAll('thead th[data-sort-key]')?.forEach(th => {
+                        th.addEventListener('click', () => {
+                            const key = th.getAttribute('data-sort-key');
+                            if (!key) return;
+                            if (_attSort.key === key){
+                                _attSort.dir = (_attSort.dir === 'asc') ? 'desc' : 'asc';
+                            } else {
+                                _attSort.key = key;
+                                _attSort.dir = (key === 'date' || key === 'first_in_ts' || key === 'last_out_ts') ? 'desc' : 'asc';
+                            }
+                            renderAttendance();
+                        });
+                    });
+                }
+                // Alerts headers
+                const alertsTableEl = elAlertsTable ? elAlertsTable.closest('table') : null;
+                if (alertsTableEl){
+                    alertsTableEl.querySelectorAll('thead th[data-sort-key]')?.forEach(th => {
+                        th.addEventListener('click', () => {
+                            const key = th.getAttribute('data-sort-key');
+                            if (!key) return;
+                            if (_alertSort.key === key){
+                                _alertSort.dir = (_alertSort.dir === 'asc') ? 'desc' : 'asc';
+                            } else {
+                                _alertSort.key = key;
+                                _alertSort.dir = (key === 'timestamp') ? 'desc' : 'asc';
+                            }
+                            renderAlerts();
+                        });
+                    });
+                }
+            }
+
+            // Wire buttons
+            if (btnLoadAtt){ btnLoadAtt.addEventListener('click', loadAttendance); }
+            if (btnLoadAlerts){ btnLoadAlerts.addEventListener('click', loadAlerts); }
+            if (elRepFrom){ elRepFrom.addEventListener('change', updateExportLinks); }
+            if (elRepTo){ elRepTo.addEventListener('change', updateExportLinks); }
+            if (elRepEmp){ elRepEmp.addEventListener('change', updateExportLinks); }
+
+            // Initialize report dropdowns/links
+            loadEmployeesForReport();
+            updateExportLinks();
+            attachSorting();
+        })();
+    </script>
+</body>
+</html>

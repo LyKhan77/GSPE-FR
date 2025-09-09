@@ -1,0 +1,6 @@
+{
+  "name": "1",
+  "rtsp_url": "rtsp://admin:gspe-intercon@192.168.0.64:554/Channels/Stream1",
+  "status": "offline",
+  "is_active": false
+}

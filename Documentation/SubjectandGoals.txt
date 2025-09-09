@@ -1,0 +1,81 @@
+Subject and Goals 
+===================
+saya diminta perusahaan untuk membuat project Auto-monitoring & reporting for employee presence.
+tujuan dibuatnya sistem ini yaitu untuk mengotomatiskan proses pemantauan kehadiran karyawan di berbagai area operasional menggunakan kamera CCTV. 
+Sistem ini bertujuan untuk melacak dan mencatat kehadiran dan ketidakhadiran karyawan selama jam kerja. 
+fungsi yang diharapkan meliputi deteksi real-time karyawan di area yang ditentukan (Face Recognition) dan notifikasi saat karyawan tidak berada di area kerja untuk waktu yang lama (misal lebih dari 5 menit). 
+Laporan akan dihasilkan secara otomatis dan dikirim melalui WhatsApp ke Supervisor atau staf HR yang relevan.
+==========================================================================================
+📌 Breakdown dari Subject & Goals
+Tujuan Utama
+- Automasi monitoring & reporting kehadiran dengan Face Recognition di area operasional.
+- Realtime detection & alert jika karyawan meninggalkan area >5 menit.
+- Laporan otomatis (WhatsApp + dashboard).
+
+📌 Detail Kebutuhan (Functional)
+1. Face Recognition with InsightFace (Core AI)
+- Input: RTSP CCTV kamera jarak ≤3 meter.
+- Output: Status available (terdeteksi) / off (tidak terdeteksi).
+- Identifikasi via wajah utama, fallback opsi badge scanner (integrasi opsional).
+
+2. Manage Employee (Settings Menu)
+- Membuat fitur yang bisa register, edit dan delete employee pada database.
+- Register employee --> input form data karyawan (included Face Capture menggunakan Camera untuk Menyimpan data Embedding di database).
+- Tabel employee --> bisa edit dan delete.
+
+2. Realtime Stream Monitoring
+- Setiap kamera → stream wajah karyawan.
+- Track “last seen” per karyawan.
+- Jika tidak terlihat > 5 menit → status = off + trigger notifikasi.
+
+3. Notifikasi WhatsApp
+- Format: [ALERT] EMP001 - <Nama Employee> keluar dari <Camera ...> sejak <Durasi Last Seen>.
+- Kirim ke supervisor sesuai hierarki organisasi.
+
+4. Reporting
+- Dashboard berbasis HTML/CSS/JS sederhana (Flask + SQLite backend).
+- Export: CSV/PDF.
+- Laporan harian via WhatsApp (absen, telat, total jam kerja).
+
+5.Scalability
+- Bisa tambah kamera/area baru dengan mudah (configurable via /camera_config/camera<...>/config.json).
+- Edge device (Jetson / PC GPU) bisa handle multi-camera.
+
+📌 Detail Kebutuhan (Non-Functional / Constraints)
+
+1. Teknis Kamera
+- CCTV jarak optimal 3m, resolusi minimal 1080p@15fps.
+- Pencahayaan harus cukup (lux ≥150 recommended).
+
+2. Integrasi
+- Sync data dengan ERP/Absensi existing (via API atau batch CSV).
+- Schema harus kompatibel untuk join dengan employee_id atau badge_id.
+
+3. Privasi & Regulasi
+- Simpan hanya embedding + snapshot event (bukan full rekaman).
+- Retensi foto/snapshot max 30 hari.
+- Notifikasi/log hanya untuk supervisor yang relevan.
+
+📌 Instruksi Tambahan (Actionable)
+
+1. Testing awal
+- Gunakan rekaman CCTV (RTSP atau webcam) → uji face recognition @3m, lighting variatif.
+- Catat akurasi deteksi, threshold awal (sim >0.35).
+
+2. Web Interface
+- Halaman: Dashboard, Employee List, Presence Log, Camera Status.
+- Tampilkan “Last seen” (contoh: <Nama employee> last seen 6 min ago).
+
+3. Tracking Out-of-Camera
+- Gunakan tabel event dengan kolom last_seen_ts.
+- Cronjob/worker cek siapa saja now - last_seen_ts > 5m.
+- Algoritma alert: jika X hilang → kirim notifikasi ke supervisor_id.
+
+📌 Next Step (yang harus kamu deliver ke client)
+
+1. Workflow diagram:
+- Kamera → AI Module → Event → “Last Seen Tracker” → Alert Engine → WhatsApp.
+
+2. Prototype kecil:
+- Single camera, single employee, threshold >5 menit → WhatsApp alert.
+- Dashboard sederhana menampilkan status: Available / Last Seen X min ago.

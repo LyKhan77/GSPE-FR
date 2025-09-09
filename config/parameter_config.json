@@ -1,0 +1,18 @@
+{
+    "model": "InsightFace (Buffalo_L)",
+    "detection_threshold": 0.6,
+    "detection_size": [640, 640],
+    "recognition_cooldown": 20,
+    "bbox_smoothing_factor": 0.9,
+    "providers": "CUDAExecutionProvider, CPUExecutionProvider",
+    "fps_target": 30,
+    "stream_max_width": 960,
+    "jpeg_quality": 50,
+    "annotation_stride": 3,
+    "frame_skip": false,
+    "multi_person": true,
+    "recognition_threshold": 0.45,
+    "max_distance_threshold": 150,
+    "tracking_timeout": 10.0,
+    "embedding_similarity_threshold": 0.65
+}
